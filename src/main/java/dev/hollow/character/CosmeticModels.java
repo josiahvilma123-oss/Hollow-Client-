@@ -1,6 +1,8 @@
 package dev.hollow.character;
 
 import dev.hollow.Hollow;
+import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
+import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
@@ -9,6 +11,8 @@ import net.minecraft.client.model.geom.builders.LayerDefinition;
 import net.minecraft.client.model.geom.builders.MeshDefinition;
 import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.model.player.PlayerModel;
+import net.minecraft.client.renderer.entity.RenderLayerParent;
+import net.minecraft.client.renderer.entity.player.AvatarRenderer;
 import net.minecraft.resources.Identifier;
 
 /**
@@ -34,6 +38,19 @@ public final class CosmeticModels {
 			case HOLLOW_KNIGHT -> HOLLOW_KNIGHT;
 			case NONE -> throw new IllegalArgumentException("No model for NONE");
 		};
+	}
+
+	/** Registers the cosmetic model layers and attaches {@link CosmeticLayer} to player renderers. */
+	@SuppressWarnings({"unchecked", "rawtypes"})
+	public static void register() {
+		EntityModelLayerRegistry.registerModelLayer(PHARAOH, CosmeticModels::pharaoh);
+		EntityModelLayerRegistry.registerModelLayer(WRAITH, CosmeticModels::wraith);
+		EntityModelLayerRegistry.registerModelLayer(HOLLOW_KNIGHT, CosmeticModels::hollowKnight);
+		LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
+			if (renderer instanceof AvatarRenderer<?> avatar) {
+				helper.register(new CosmeticLayer((RenderLayerParent) avatar, context.getModelSet()));
+			}
+		});
 	}
 
 	private static PartDefinition emptyPlayer(MeshDefinition mesh) {

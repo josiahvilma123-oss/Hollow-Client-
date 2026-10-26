@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 /** Shared access to Hollow's long-lived services. Populated once in {@link HollowClient}. */
 public final class Hollow {
 	public static final String MOD_ID = "hollow";
-	public static final String NAME = "Hollow";
+	public static final String NAME = "Holo";
 	public static final Logger LOGGER = LoggerFactory.getLogger(NAME);
 
 	static ModuleManager modules;

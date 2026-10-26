@@ -1,9 +1,13 @@
 package dev.hollow.gui;
 
+import dev.hollow.Hollow;
 import dev.hollow.core.anim.Easing;
 import dev.hollow.core.anim.Transition;
 import dev.hollow.core.module.Module;
+import dev.hollow.core.setting.ActionBarSetting;
 import dev.hollow.core.setting.ActionSetting;
+import dev.hollow.core.setting.TextSetting;
+import dev.hollow.modules.SkyStudioModule;
 import dev.hollow.core.setting.BoolSetting;
 import dev.hollow.core.setting.ColorSetting;
 import dev.hollow.core.setting.EnumSetting;
@@ -111,6 +115,16 @@ final class ModuleWindow {
 		}
 		if (setting instanceof ActionSetting action) {
 			return new ActionRow(action);
+		}
+		if (setting instanceof ActionBarSetting bar) {
+			return new ActionBarRow(bar);
+		}
+		if (setting instanceof TextSetting text) {
+			SkyStudioModule sky = Hollow.module(SkyStudioModule.class);
+			if (sky != null && setting == sky.preset) {
+				return new SkyLibraryRow(sky);
+			}
+			return new TextRow(text);
 		}
 		return null;
 	}

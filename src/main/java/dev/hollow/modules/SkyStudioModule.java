@@ -19,9 +19,16 @@ import dev.hollow.sky.SkyEnums.Silhouettes;
 import dev.hollow.sky.SkyEnums.TimeMode;
 import dev.hollow.sky.SkyPresetStore;
 import dev.hollow.sky.SkyPresets;
+import dev.hollow.core.setting.ActionBarSetting;
+import dev.hollow.core.setting.ActionSetting;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
+import net.minecraft.client.Minecraft;
+import net.minecraft.util.Util;
 
 /**
  * Holo Sky Studio: replaces the overworld sky with a layered procedural sky. Every visual value
@@ -35,6 +42,24 @@ public final class SkyStudioModule extends Module {
 		SkyPresetStore.MAX_NAME_LENGTH, s -> true, ""));
 	public final TextSetting presetName = add("Library", new TextSetting("preset_name", "Preset Name",
 		"Name used by Save As and Rename.", "My Sky", SkyPresetStore.MAX_NAME_LENGTH, s -> !s.isBlank(), "Preset name"));
+
+	public final ActionBarSetting presetActions = add("Library", new ActionBarSetting("preset_actions", "Manage",
+		"Save overwrites the active custom preset (built-ins are saved as a copy). Save As, Rename and Duplicate use the name above.",
+		new ActionBarSetting.Button("Save", this::save),
+		new ActionBarSetting.Button("Save As", () -> saveAs(presetName.get())),
+		new ActionBarSetting.Button("Rename", () -> rename(presetName.get())),
+		new ActionBarSetting.Button("Duplicate", this::duplicate),
+		new ActionBarSetting.Button("Delete", this::deleteSelected),
+		new ActionBarSetting.Button("Revert", this::revert)));
+	public final ActionBarSetting shareActions = add("Library", new ActionBarSetting("share_actions", "Share",
+		"Export copies the sky to the clipboard and writes it to skies/exports. Import reads a sky from the clipboard.",
+		new ActionBarSetting.Button("Export", this::exportToClipboardAndFile),
+		new ActionBarSetting.Button("Import", this::importFromClipboard),
+		new ActionBarSetting.Button("Open Folder", this::openFolder)));
+	public final ActionSetting restore = add("Library", new ActionSetting("restore_vanilla", "Restore Vanilla Sky",
+		"Turns Sky Studio off. Your presets and current values are kept.", "Restore", this::restoreVanilla));
+	public final BoolSetting advanced = add("Library", new BoolSetting("advanced", "Advanced Controls",
+		"Show every sky parameter. Off shows the essentials.", false));
 
 	private final List<Setting<?>> skyValues = new ArrayList<>();
 
@@ -150,6 +175,14 @@ public final class SkyStudioModule extends Module {
 		sunAzimuth.visibleWhen(() -> motion.get() == Motion.PINNED);
 		moonElevation.visibleWhen(() -> motion.get() == Motion.PINNED);
 		moonAzimuth.visibleWhen(() -> motion.get() == Motion.PINNED);
+		// Simple mode shows the essentials; this runs last so it composes with the conditions above.
+		List<Setting<?>> simple = List.of(timeMode, zenith, horizon, brightness, sunStyle, sunColor, moonStyle, moonColor, starDensity,
+			nebula, ring, silhouettes, cloudMode);
+		for (Setting<?> setting : skyValues) {
+			if (!simple.contains(setting)) {
+				setting.alsoVisibleWhen(advanced::get);
+			}
+		}
 	}
 
 	private <S extends Setting<?>> S sky(String group, S setting) {
@@ -291,6 +324,40 @@ public final class SkyStudioModule extends Module {
 			preset.set(imported.name());
 			message("Imported " + imported.name());
 		});
+	}
+
+	private void exportToClipboardAndFile() {
+		runSafely(() -> {
+			String json = exportSelected();
+			Minecraft.getInstance().keyboardHandler.setClipboard(json);
+			Path exports = store().directory().resolve("exports");
+			try {
+				Files.createDirectories(exports);
+				Path file = exports.resolve(SkyPresetStore.slug(preset.get()) + ".json");
+				Files.writeString(file, json);
+				message("Copied to clipboard and saved exports/" + file.getFileName());
+			} catch (IOException e) {
+				message("Copied to clipboard (could not write file: " + e.getMessage() + ")");
+			}
+		});
+	}
+
+	private void importFromClipboard() {
+		String clipboard = Minecraft.getInstance().keyboardHandler.getClipboard();
+		if (clipboard == null || clipboard.isBlank()) {
+			message("Clipboard is empty; copy an exported sky first");
+			return;
+		}
+		importJson(clipboard);
+	}
+
+	private void openFolder() {
+		try {
+			Files.createDirectories(store().directory());
+			Util.getPlatform().openPath(store().directory());
+		} catch (IOException e) {
+			message("Could not open folder: " + e.getMessage());
+		}
 	}
 
 	public void restoreVanilla() {

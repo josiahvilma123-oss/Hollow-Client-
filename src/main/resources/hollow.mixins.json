@@ -1,20 +1,23 @@
 {
-	"required": true,
-	"minVersion": "0.8",
-	"package": "dev.hollow.mixin",
-	"compatibilityLevel": "JAVA_21",
-	"client": [
-		"ClientLevelMixin",
-		"CloudRendererMixin",
-		"FogRendererMixin",
-		"GameRendererMixin",
-		"ItemInHandRendererMixin",
-		"ItemLayerRenderStateMixin",
-		"LevelRendererMixin",
-		"LivingEntityAccessor",
-		"SkyRendererMixin"
-	],
-	"injectors": {
-		"defaultRequire": 0
-	}
+  "required": true,
+  "minVersion": "0.8",
+  "package": "dev.hollow.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "ClientLevelMixin",
+    "CloudRendererMixin",
+    "FogRendererMixin",
+    "GameRendererMixin",
+    "ItemInHandRendererMixin",
+    "ItemLayerRenderStateMixin",
+    "LevelRendererMixin",
+    "LivingEntityAccessor",
+    "LoadingOverlayMixin",
+    "MinecraftMixin",
+    "ScreenMixin",
+    "SkyRendererMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
 }

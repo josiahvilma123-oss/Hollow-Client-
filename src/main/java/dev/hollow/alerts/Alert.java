@@ -13,7 +13,7 @@ import java.util.Objects;
  * @param detail      optional extra context such as the mob's name; empty when not needed
  */
 public record Alert(AlertSource source, String subject, String verb, double distance, String cooldownKey, String detail) {
-	public static final String PREFIX = "HOLLOW ALERT";
+	public static final String PREFIX = "HOLO ALERT";
 
 	public Alert {
 		Objects.requireNonNull(source);
@@ -37,7 +37,7 @@ public record Alert(AlertSource source, String subject, String verb, double dist
 		return hasDistance() ? text + " · " + formatDistance(distance) : text;
 	}
 
-	/** "HOLLOW ALERT — Amethyst Cluster Detected · 12.4m" */
+	/** "HOLO ALERT — Amethyst Cluster Detected · 12.4m" */
 	public String fullText() {
 		return PREFIX + " — " + body();
 	}

@@ -5,7 +5,13 @@ import dev.hollow.core.module.Module;
 import dev.hollow.detection.EntityCategory;
 import dev.hollow.gui.HollowScreen;
 import dev.hollow.hands.HandPreset;
+import dev.hollow.character.Cosmetic;
+import dev.hollow.menu.HoloTitleScreen;
+import dev.hollow.menu.TitleScreenSwap;
 import dev.hollow.modules.BlockEspModule;
+import dev.hollow.modules.CharacterStudioModule;
+import dev.hollow.modules.MainMenuModule;
+import dev.hollow.modules.ThemePacksModule;
 import dev.hollow.modules.BlockFinderModule;
 import dev.hollow.modules.EntityTracersModule;
 import dev.hollow.modules.HollowAlertsModule;
@@ -19,6 +25,8 @@ import dev.hollow.render.WorldOverlayRenderer;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.minecraft.client.CameraType;
+import net.minecraft.client.gui.screens.TitleScreen;
 import net.minecraft.client.gui.screens.worldselection.WorldCreationUiState;
 import net.minecraft.world.InteractionHand;
 
@@ -40,6 +48,8 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			client.options.framerateLimit().set(30);
 			client.options.menuBackgroundBlurriness().set(0);
 		});
+		menuAndLoading(context);
+
 		try (TestSingleplayerContext world = context.worldBuilder()
 				.adjustSettings(creator -> creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE))
 				.create()) {
@@ -92,7 +102,7 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			int index = 3;
 			context.takeScreenshot(String.format("hollow-%02d-gui-windows", index++));
 			String[] pages = {"motion_blur", "hollow_hands", "block_finder", "block_esp", "entity_tracers", "hollow_alerts",
-				"interface", "server_rules"};
+				"interface", "server_rules", "sky_studio", "character_studio", "theme_packs", "main_menu", "loading_screen", "performance"};
 			for (String id : pages) {
 				Class<? extends Module> type = Hollow.modules().byId(id).orElseThrow().getClass();
 				context.setScreen(() -> new HollowScreen(null).openOn(type));
@@ -161,7 +171,46 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				context.waitTicks(4);
 				context.takeScreenshot(String.format("hollow-%02d-sky-%s", index++, SkyPresetStore.slug(preset.name())));
 			}
+			measureSkyCost(context);
 			context.runOnClient(client -> Hollow.module(SkyStudioModule.class).setEnabled(false));
+
+			// Character Studio cosmetics in third person, then a whole theme pack.
+			context.runOnClient(client -> {
+				client.options.setCameraType(CameraType.THIRD_PERSON_FRONT);
+				client.player.setXRot(10f);
+				Hollow.module(CharacterStudioModule.class).setEnabled(true);
+			});
+			for (Cosmetic cosmetic : new Cosmetic[] {Cosmetic.PHARAOH, Cosmetic.WRAITH, Cosmetic.HOLLOW_KNIGHT}) {
+				context.runOnClient(client -> Hollow.module(CharacterStudioModule.class).cosmetic.set(cosmetic));
+				context.waitTicks(4);
+				context.takeScreenshot(String.format("hollow-%02d-cosmetic-%s", index++, cosmetic.asset()));
+			}
+			context.runOnClient(client -> {
+				ThemePacksModule packs = Hollow.module(ThemePacksModule.class);
+				packs.pack.set(ThemePacksModule.Pack.PHARAOH);
+				packs.applyAll.run();
+				if (!Hollow.module(SkyStudioModule.class).preset.get().equals("Pharaoh's Night")
+						|| Hollow.module(CharacterStudioModule.class).cosmetic.get() != Cosmetic.PHARAOH
+						|| Hollow.module(MainMenuModule.class).scene.get() != MainMenuModule.Scene.TEMPLE) {
+					throw new AssertionError("Theme pack did not apply every component: " + packs.lastApplied());
+				}
+				// Applying only the character must leave the sky alone.
+				packs.pack.set(ThemePacksModule.Pack.WRAITH);
+				packs.applySky.set(false);
+				packs.applyInterface.set(false);
+				packs.applyWeapon.set(false);
+				packs.applyMenu.set(false);
+				packs.applySelected.run();
+				if (!Hollow.module(SkyStudioModule.class).preset.get().equals("Pharaoh's Night")
+						|| Hollow.module(CharacterStudioModule.class).cosmetic.get() != Cosmetic.WRAITH) {
+					throw new AssertionError("Applying one component changed others: " + packs.lastApplied());
+				}
+				packs.pack.set(ThemePacksModule.Pack.PHARAOH);
+				client.player.setXRot(-12f);
+			});
+			context.waitTicks(6);
+			context.takeScreenshot(String.format("hollow-%02d-theme-pack", index++));
+			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
 
 			// Disabling every module restores vanilla rendering.
 			context.runOnClient(client -> {
@@ -188,6 +237,112 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				Hollow.module(InterfaceModule.class);
 			});
 		}
+	}
+
+	/** The Holo title screen in each scene, the vanilla fallback, studio pages from the menu, and a resource reload. */
+	private static void menuAndLoading(ClientGameTestContext context) {
+		context.setScreen(TitleScreen::new);
+		context.waitTicks(30);
+		context.runOnClient(client -> {
+			if (!(client.screen instanceof HoloTitleScreen)) {
+				throw new AssertionError("Title screen was not replaced: " + client.screen);
+			}
+			Hollow.module(MainMenuModule.class).character.set(MainMenuModule.Featured.WRAITH);
+		});
+		context.waitTicks(10);
+		context.takeScreenshot("holo-01-menu-temple");
+		MainMenuModule.Scene[] scenes = {MainMenuModule.Scene.PYRAMIDS, MainMenuModule.Scene.VOID, MainMenuModule.Scene.SKY,
+			MainMenuModule.Scene.CUSTOM};
+		int index = 2;
+		for (MainMenuModule.Scene scene : scenes) {
+			context.runOnClient(client -> {
+				MainMenuModule menu = Hollow.module(MainMenuModule.class);
+				menu.scene.set(scene);
+				menu.character.set(scene == MainMenuModule.Scene.PYRAMIDS ? MainMenuModule.Featured.PHARAOH : MainMenuModule.Featured.HOLLOW_KNIGHT);
+				if (scene == MainMenuModule.Scene.SKY) {
+					Hollow.module(SkyStudioModule.class).applyPreset("Anubis Eclipse");
+				}
+			});
+			context.waitTicks(12);
+			context.takeScreenshot(String.format("holo-%02d-menu-%s", index++, scene.name().toLowerCase(java.util.Locale.ROOT)));
+		}
+		context.runOnClient(client -> {
+			MainMenuModule menu = Hollow.module(MainMenuModule.class);
+			menu.scene.set(MainMenuModule.Scene.TEMPLE);
+			menu.character.set(MainMenuModule.Featured.WRAITH);
+			Hollow.module(SkyStudioModule.class).applyPreset("Vanilla Enhanced");
+		});
+		context.waitTicks(8);
+
+		// Studio pages opened from the menu keep the scene behind them.
+		context.setScreen(() -> new HollowScreen(new HoloTitleScreen()).openOn(SkyStudioModule.class));
+		context.waitTicks(12);
+		context.takeScreenshot(String.format("holo-%02d-menu-sky-studio", index++));
+		context.setScreen(() -> new HollowScreen(new HoloTitleScreen()).openOn(ThemePacksModule.class));
+		context.waitTicks(12);
+		context.takeScreenshot(String.format("holo-%02d-menu-theme-packs", index++));
+
+		// Other menus share the backdrop.
+		context.setScreen(() -> new net.minecraft.client.gui.screens.worldselection.SelectWorldScreen(new HoloTitleScreen()));
+		context.waitTicks(12);
+		context.takeScreenshot(String.format("holo-%02d-menu-world-list", index++));
+
+		// Vanilla fallback: the button shows vanilla once; turning the module off keeps it.
+		context.runOnClient(client -> TitleScreenSwap.showVanilla());
+		context.waitTicks(10);
+		context.runOnClient(client -> {
+			if (client.screen == null || client.screen.getClass() != TitleScreen.class) {
+				throw new AssertionError("Vanilla Menu did not show vanilla's title screen");
+			}
+			Hollow.module(MainMenuModule.class).setEnabled(false);
+			client.setScreen(new TitleScreen());
+			if (client.screen.getClass() != TitleScreen.class) {
+				throw new AssertionError("Disabled main menu still replaced the title screen");
+			}
+		});
+		context.waitTicks(10);
+		context.takeScreenshot(String.format("holo-%02d-menu-vanilla-restored", index++));
+		context.runOnClient(client -> {
+			Hollow.module(MainMenuModule.class).setEnabled(true);
+			client.setScreen(new TitleScreen());
+		});
+		context.waitTicks(10);
+
+		// Resource reload shows the Holo loading screen; it must hand back to the menu by itself.
+		long[] reloadStart = new long[1];
+		context.runOnClient(client -> {
+			reloadStart[0] = System.nanoTime();
+			client.reloadResourcePacks();
+		});
+		context.waitTicks(3);
+		context.takeScreenshot(String.format("holo-%02d-loading-reload", index++));
+		context.waitFor(client -> client.getOverlay() == null, 20 * 120);
+		context.runOnClient(client -> {
+			Hollow.LOGGER.info("[gametest] Resource reload with the Holo loading screen took {} ms",
+				(System.nanoTime() - reloadStart[0]) / 1_000_000);
+			if (!(client.screen instanceof HoloTitleScreen)) {
+				throw new AssertionError("Expected the Holo menu after reloading, got " + client.screen);
+			}
+		});
+		context.waitTicks(10);
+	}
+
+	/** Frame rate with Sky Studio off and on, at an uncapped frame rate. Software rendering, so only the ratio means anything. */
+	private static void measureSkyCost(ClientGameTestContext context) {
+		int[] fps = new int[2];
+		for (int pass = 0; pass < 2; pass++) {
+			boolean on = pass == 1;
+			context.runOnClient(client -> {
+				client.options.framerateLimit().set(260);
+				Hollow.module(SkyStudioModule.class).setEnabled(on);
+				Hollow.module(SkyStudioModule.class).applyPreset("Anubis Eclipse");
+			});
+			context.waitTicks(50);
+			int slot = pass;
+			context.runOnClient(client -> fps[slot] = client.getFps());
+		}
+		context.runOnClient(client -> client.options.framerateLimit().set(30));
+		Hollow.LOGGER.info("[gametest] FPS with Sky Studio off: {}, on: {}", fps[0], fps[1]);
 	}
 
 	private static void buildScene(TestSingleplayerContext world) {

@@ -21,7 +21,13 @@ import dev.hollow.render.HollowPipelines;
 import dev.hollow.render.HudOverlay;
 import dev.hollow.render.ScreenProjector;
 import dev.hollow.render.WorldOverlayRenderer;
+import dev.hollow.character.CosmeticModels;
+import dev.hollow.modules.CharacterStudioModule;
+import dev.hollow.modules.LoadingScreenModule;
+import dev.hollow.modules.MainMenuModule;
+import dev.hollow.modules.PerformanceModule;
 import dev.hollow.modules.SkyStudioModule;
+import dev.hollow.modules.ThemePacksModule;
 import dev.hollow.sky.HoloSkyRenderer;
 import dev.hollow.sky.SkyPresetStore;
 import dev.hollow.sky.SkyPresets;
@@ -60,6 +66,11 @@ public final class HollowClient implements ClientModInitializer {
 		modules.register(new HollowAlertsModule());
 		modules.register(new InterfaceModule());
 		SkyStudioModule skyStudio = modules.register(new SkyStudioModule());
+		modules.register(new CharacterStudioModule());
+		modules.register(new ThemePacksModule());
+		modules.register(new MainMenuModule());
+		modules.register(new LoadingScreenModule());
+		modules.register(new PerformanceModule());
 		modules.register(new ServerRulesModule());
 		Hollow.modules = modules;
 
@@ -86,6 +97,8 @@ public final class HollowClient implements ClientModInitializer {
 				HoloSkyRenderer.INSTANCE.onResourcesReloaded();
 			}
 		});
+
+		CosmeticModels.register();
 
 		ConfigManager config = new ConfigManager(FabricLoader.getInstance().getConfigDir().resolve("hollow").resolve("hollow.json"),
 			modules, Clock.SYSTEM, 750, Hollow.LOGGER::warn);
@@ -131,7 +144,7 @@ public final class HollowClient implements ClientModInitializer {
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR, id("labels"), HudOverlay.INSTANCE::renderLabels);
 		HudElementRegistry.addLast(id("alerts"), HudOverlay.INSTANCE::renderAlerts);
 
-		Hollow.LOGGER.info("Hollow initialised with {} modules", modules.all().size());
+		Hollow.LOGGER.info("Holo initialised with {} modules", modules.all().size());
 	}
 
 	public static KeyMapping openMenuKey() {

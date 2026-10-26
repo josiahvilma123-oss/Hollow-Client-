@@ -9,6 +9,11 @@ import dev.hollow.core.util.Colors;
 import dev.hollow.detection.EntityCategory;
 import dev.hollow.hands.HandAnimator;
 import dev.hollow.modules.BlockEspModule;
+import dev.hollow.modules.CharacterStudioModule;
+import dev.hollow.modules.LoadingScreenModule;
+import dev.hollow.modules.MainMenuModule;
+import dev.hollow.modules.SkyStudioModule;
+import dev.hollow.modules.ThemePacksModule;
 import dev.hollow.modules.BlockFinderModule;
 import dev.hollow.modules.EntityTracersModule;
 import dev.hollow.modules.HollowHandsModule;
@@ -32,7 +37,8 @@ final class PreviewRow extends Row {
 
 	static PreviewRow forModule(Module module) {
 		return switch (module.id()) {
-			case "motion_blur", "hollow_hands", "block_finder", "block_esp", "entity_tracers", "hollow_alerts", "server_rules" ->
+			case "motion_blur", "hollow_hands", "block_finder", "block_esp", "entity_tracers", "hollow_alerts", "server_rules",
+				"sky_studio", "character_studio", "theme_packs", "main_menu", "loading_screen" ->
 				new PreviewRow(module);
 			default -> null;
 		};
@@ -44,6 +50,8 @@ final class PreviewRow extends Row {
 			case "block_finder" -> 26 + legendHeight(ui);
 			case "hollow_alerts" -> 54;
 			case "server_rules" -> 58;
+			case "sky_studio", "main_menu", "loading_screen" -> 104;
+			case "character_studio", "theme_packs" -> 112;
 			default -> 70;
 		};
 	}
@@ -65,10 +73,27 @@ final class PreviewRow extends Row {
 			case "entity_tracers" -> tracers(g, ui, cx, y, cw, h);
 			case "hollow_alerts" -> alerts(g, ui, cx, y, cw);
 			case "server_rules" -> rules(g, ui, cx, y);
+			case "sky_studio" -> StudioPreviews.sky(g, ui, (SkyStudioModule) module, cx, y, cw, h);
+			case "character_studio" -> StudioPreviews.character(g, ui, (CharacterStudioModule) module, cx, y, cw, h, mouseX, mouseY);
+			case "theme_packs" -> StudioPreviews.themePacks(g, ui, (ThemePacksModule) module, cx, y, cw, h, mouseX, mouseY);
+			case "main_menu" -> StudioPreviews.mainMenu(g, ui, (MainMenuModule) module, cx, y, cw, h);
+			case "loading_screen" -> StudioPreviews.loading(g, ui, (LoadingScreenModule) module, cx, y, cw, h);
 			default -> {
 			}
 		}
 		g.disableScissor();
+	}
+
+	@Override
+	boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (module instanceof ThemePacksModule packs && button == 0) {
+			ThemePacksModule.Pack pack = StudioPreviews.packAt(x + PAD, y, width - PAD * 2, height(ui) - 6, mouseX, mouseY);
+			if (pack != null) {
+				packs.pack.set(pack);
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static double seconds() {

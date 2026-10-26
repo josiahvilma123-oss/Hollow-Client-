@@ -12,8 +12,8 @@ class AlertFeedTest {
 	void formatsLikeTheHollowSpec() {
 		Alert block = new Alert(AlertSource.BLOCKS, "Amethyst Cluster", "Detected", 12.42, "block:amethyst");
 		Alert mob = new Alert(AlertSource.HOSTILE, "Hostile Mob", "Nearby", 18.2, "entity:hostile");
-		assertEquals("HOLLOW ALERT — Amethyst Cluster Detected · 12.4m", block.fullText());
-		assertEquals("HOLLOW ALERT — Hostile Mob Nearby · 18.2m", mob.fullText());
+		assertEquals("HOLO ALERT — Amethyst Cluster Detected · 12.4m", block.fullText());
+		assertEquals("HOLO ALERT — Hostile Mob Nearby · 18.2m", mob.fullText());
 		Alert noDistance = new Alert(AlertSource.BLOCKS, "Ancient Debris", "Detected", Double.NaN, "k");
 		assertEquals("Ancient Debris Detected", noDistance.body());
 	}

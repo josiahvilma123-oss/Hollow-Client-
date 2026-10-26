@@ -57,6 +57,13 @@ public abstract class Setting<T> {
 		return this;
 	}
 
+	/** Adds a further visibility condition on top of the existing one. */
+	public Setting<T> alsoVisibleWhen(BooleanSupplier condition) {
+		BooleanSupplier previous = visibility;
+		this.visibility = () -> previous.getAsBoolean() && condition.getAsBoolean();
+		return this;
+	}
+
 	public boolean isVisible() {
 		return visibility.getAsBoolean();
 	}

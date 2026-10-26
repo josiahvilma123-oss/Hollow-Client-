@@ -7,6 +7,8 @@ import dev.hollow.core.anim.Transition;
 import dev.hollow.core.module.Category;
 import dev.hollow.core.module.Module;
 import dev.hollow.core.util.Colors;
+import dev.hollow.menu.MenuScene;
+import dev.hollow.menu.TitleScreenSwap;
 import dev.hollow.modules.InterfaceModule;
 import dev.hollow.modules.MotionBlurModule;
 import dev.hollow.render.Draw2D;
@@ -54,7 +56,7 @@ public final class HollowScreen extends Screen {
 	private boolean closing;
 
 	public HollowScreen(Screen parent) {
-		super(Component.literal("Hollow"));
+		super(Component.literal("Holo"));
 		this.parent = parent;
 	}
 
@@ -152,6 +154,14 @@ public final class HollowScreen extends Screen {
 
 	@Override
 	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+		if (minecraft.level == null) {
+			// Opened from the title screen: keep its scene behind the menu.
+			if (TitleScreenSwap.sceneEnabled()) {
+				MenuScene.render(g, width, height, -1, -1, -1);
+			} else {
+				renderPanorama(g, partialTick);
+			}
+		}
 		float dim = Hollow.module(InterfaceModule.class).backdrop.getFloat();
 		float e = (float) open.eased(Easing.CUBIC_OUT);
 		int top = Colors.withAlpha(0xFF050308, Math.round(255 * dim * 0.85f * e));
@@ -241,7 +251,7 @@ public final class HollowScreen extends Screen {
 		Draw2D.rounded(g, bx, by, bw, BAR_HEIGHT, BAR_HEIGHT / 2f, ui.c(Colors.withAlpha(Theme.PANEL, 240)));
 		Draw2D.roundedBorder(g, bx, by, bw, BAR_HEIGHT, BAR_HEIGHT / 2f, 1, ui.c(Colors.withAlpha(Theme.BORDER, 230)));
 		Draw2D.scythe(g, bx + 9, by + 4, 14, ui.c(ui.accentLight));
-		Draw2D.spaced(g, font, "HOLLOW", (int) bx + 28, (int) by + 7, ui.c(Theme.TEXT), 2);
+		Draw2D.spaced(g, font, "HOLO", (int) bx + 28, (int) by + 7, ui.c(Theme.TEXT), 2);
 		search.render(g, ui, searchX(), (int) by + 4, searchWidth(), 14);
 	}
 
