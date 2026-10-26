@@ -62,17 +62,18 @@ public final class HollowScreen extends Screen {
 	protected void init() {
 		InterfaceModule settings = Hollow.module(InterfaceModule.class);
 		if (windows.isEmpty()) {
-			int index = 0;
+			// Default layout: categories stacked in a left column, leaving room for settings.
+			float nextY = BAR_HEIGHT + 24;
 			for (Category category : Category.values()) {
 				if (Hollow.modules().byCategory(category).isEmpty()) {
 					continue;
 				}
 				String id = category.name().toLowerCase(Locale.ROOT);
 				int[] saved = settings.windowPosition(id);
-				float x = saved != null ? saved[0] : 16 + index * (CategoryWindow.WIDTH + 14);
-				float y = saved != null ? saved[1] : BAR_HEIGHT + 24;
-				windows.add(new CategoryWindow(category, x, y, saved != null && saved[2] == 1));
-				index++;
+				CategoryWindow window = new CategoryWindow(category, saved != null ? saved[0] : 16, saved != null ? saved[1] : nextY,
+					saved != null && saved[2] == 1);
+				windows.add(window);
+				nextY += window.height("") + 12;
 			}
 		}
 		for (CategoryWindow window : windows) {
@@ -120,8 +121,9 @@ public final class HollowScreen extends Screen {
 			closingWindows.add(moduleWindow);
 		} else {
 			int[] saved = Hollow.module(InterfaceModule.class).windowPosition(SETTINGS_WINDOW_ID);
-			x = saved != null ? saved[0] : (width - w) / 2f + 70;
-			y = saved != null ? saved[1] : BAR_HEIGHT + 22;
+			float besideColumn = 16 + CategoryWindow.WIDTH + 16;
+			x = saved != null ? saved[0] : besideColumn + w <= width - 8 ? besideColumn : (width - w) / 2f;
+			y = saved != null ? saved[1] : BAR_HEIGHT + 24;
 		}
 		x = clamp(x, 0, width - w);
 		y = clamp(y, 0, height - h);
@@ -286,8 +288,10 @@ public final class HollowScreen extends Screen {
 
 	private void renderHint(GuiGraphics g) {
 		String key = HollowClient.openMenuKey() == null ? "Right Shift" : HollowClient.openMenuKey().getTranslatedKeyMessage().getString();
-		String hint = "Left-click toggles · Right-click opens settings · Drag headers to move · " + key + " closes";
-		Draw2D.text(g, font, Draw2D.ellipsize(font, hint, width - 16), 8, height - 14, ui.c(Colors.withAlpha(Theme.TEXT_FAINT, 200)));
+		String hint = "Click: toggle · Right-click: settings · Drag headers · " + key + ": close";
+		// Keep clear of the hotbar in the bottom centre.
+		int maxWidth = Math.max(60, width / 2 - 100);
+		Draw2D.text(g, font, Draw2D.ellipsize(font, hint, maxWidth), 8, height - 14, ui.c(Colors.withAlpha(Theme.TEXT_FAINT, 200)));
 	}
 
 	// ---------------------------------------------------------------- input

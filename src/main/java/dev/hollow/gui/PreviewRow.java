@@ -267,14 +267,14 @@ final class PreviewRow extends Row {
 		int oy = y + h / 2 + 4;
 		EntityCategory[] shown = {EntityCategory.HOSTILE, EntityCategory.PASSIVE, EntityCategory.NEUTRAL, EntityCategory.PLAYERS};
 		// Two targets on each side, with room for their labels on the outer side.
-		double radiusX = Math.max(40, Math.min(w / 2.0 - 150, 160));
-		double[] angles = {Math.toRadians(205), Math.toRadians(155), Math.toRadians(335), Math.toRadians(25)};
+		int radiusX = (int) Math.max(40, Math.min(w / 2.0 - 150, 160));
+		int[][] offsets = {{-radiusX, -13}, {-radiusX + 18, 13}, {radiusX, -13}, {radiusX - 18, 13}};
 		for (int i = 0; i < shown.length; i++) {
 			EntityCategory category = shown[i];
 			EntityTracersModule.CategorySettings settings = tracers.category(category);
-			double breathe = Math.sin(seconds() * 1.3 + i) * 2;
-			int tx = ox + (int) Math.round(Math.cos(angles[i]) * radiusX);
-			int ty = oy + (int) Math.round(Math.sin(angles[i]) * (h / 2.0 - 18) + breathe);
+			int breathe = (int) Math.round(Math.sin(seconds() * 1.3 + i) * 1.5);
+			int tx = ox + offsets[i][0];
+			int ty = oy + offsets[i][1] + breathe;
 			boolean visible = settings.show.get() && (category != EntityCategory.PLAYERS || players);
 			int color = visible ? settings.color.argb() : Theme.OFF;
 			if (visible && tracers.lines.get()) {
