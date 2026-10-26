@@ -108,7 +108,18 @@ public final class HoloSkyRenderer {
 	public boolean shouldReplaceWorldSky() {
 		Minecraft minecraft = Minecraft.getInstance();
 		return module().isEnabled() && minecraft.level != null && skybox == DimensionType.Skybox.OVERWORLD
-			&& !ShaderPackCompat.shaderPackActive();
+			&& !ShaderPackCompat.shaderPackActive() && shaderUsable();
+	}
+
+	/** False (and Sky Studio marked unavailable) when this driver can't compile the sky shader. */
+	public boolean shaderUsable() {
+		if (HollowPipelines.usable(HollowPipelines.HOLO_SKY)) {
+			return true;
+		}
+		if (module().isAvailable()) {
+			module().markUnavailable("This graphics driver couldn't compile the sky shader; the vanilla sky is kept");
+		}
+		return false;
 	}
 
 	/** Decides once per frame, at the first sky draw call, whether vanilla's sky is replaced. */

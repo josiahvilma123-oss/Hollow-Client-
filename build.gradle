@@ -35,6 +35,9 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
+	// Mods for the production test run (the built jar is added automatically).
+	productionRuntimeMods "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
 	testImplementation platform('org.junit:junit-bom:5.11.4')
 	testImplementation 'org.junit.jupiter:junit-jupiter'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -72,4 +75,9 @@ jar {
 
 test {
 	useJUnitPlatform()
+}
+
+// Runs the remapped release jar exactly as players get it (intermediary names, no dev tooling).
+tasks.register('prodClient', net.fabricmc.loom.task.prod.ClientProductionRunTask) {
+	useXVFB = false
 }

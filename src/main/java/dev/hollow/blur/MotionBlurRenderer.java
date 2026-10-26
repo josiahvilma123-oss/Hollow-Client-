@@ -58,6 +58,11 @@ public final class MotionBlurRenderer {
 			lastNanos = -1;
 			return;
 		}
+		if (!HollowPipelines.usable(HollowPipelines.MOTION_BLUR)) {
+			module.markUnavailable("This graphics driver couldn't compile the motion blur shader");
+			release();
+			return;
+		}
 		try {
 			process(minecraft, module);
 		} catch (RuntimeException e) {

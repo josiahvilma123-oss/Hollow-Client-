@@ -130,6 +130,8 @@ All injections are optional (`defaultRequire: 0`) and pass straight through when
 | `ScreenMixin` | `Screen.renderPanorama` | Draws the Holo backdrop behind other out-of-world menus. |
 | `LoadingOverlayMixin` | `LoadingOverlay.render` / `tick` | Restyles the loading overlay; optional quick hand-off. |
 
+Holo's own shader pipelines are not registered as required pipelines. They compile on first use, so a graphics driver that rejects one only turns off that effect; it can never stop the game from loading.
+
 Character cosmetics use Fabric API's `EntityModelLayerRegistry` and `LivingEntityFeatureRendererRegistrationCallback`. No mixin is involved.
 
 ## Performance
@@ -158,6 +160,7 @@ The nebula noise is the largest sky cost. *Detail: Low* (or the *Low Performance
 ./gradlew build            # compiles, runs unit tests, produces build/libs/hollow-<version>.jar
 ./gradlew test             # unit tests only (pure logic: settings, config, blur math, hands, filters, alerts, policy)
 ./gradlew runClient        # launches the game with Hollow in a dev environment
+./gradlew prodClient         # runs the release jar exactly as players get it (remapped, with Fabric API)
 ./gradlew runClientGameTest  # launches the real client, checks the menus, loading screen, studios and detection, measures frame times and saves screenshots
 ```
 

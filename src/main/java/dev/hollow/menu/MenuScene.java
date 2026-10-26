@@ -249,6 +249,11 @@ public final class MenuScene {
 	}
 
 	private static void drawStudioSky(GuiGraphics g, int w, int h, float px, float py) {
+		if (!HoloSkyRenderer.INSTANCE.shaderUsable()) {
+			skyFailed = true;
+			g.fill(0, 0, w, h, 0xFF050308);
+			return;
+		}
 		try {
 			HoloSkyRenderer.INSTANCE.renderMenuSky(time * 1.2f + px * 6f, -14f + py * 4f, 75f);
 		} catch (RuntimeException e) {

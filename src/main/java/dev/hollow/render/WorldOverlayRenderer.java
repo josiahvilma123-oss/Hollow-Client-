@@ -75,6 +75,15 @@ public final class WorldOverlayRenderer {
 			return;
 		}
 
+		// If this driver couldn't compile a pipeline, skip that kind of shape (labels still show).
+		if (!HollowPipelines.usable(HollowPipelines.FILL_DEPTH) || !HollowPipelines.usable(HollowPipelines.FILL_SEE_THROUGH)) {
+			fills.clear();
+		}
+		if (!HollowPipelines.usable(HollowPipelines.LINES_DEPTH) || !HollowPipelines.usable(HollowPipelines.LINES_SEE_THROUGH)) {
+			outlines.clear();
+			lines.clear();
+		}
+
 		PoseStack poses = context.matrices();
 		poses.pushPose();
 		PoseStack.Pose pose = poses.last();

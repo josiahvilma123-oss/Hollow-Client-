@@ -167,6 +167,9 @@ public final class HandRenderHooks {
 		if (MAIN_TRAIL.size() < 2 && OFF_TRAIL.size() < 2) {
 			return;
 		}
+		if (!HollowPipelines.usable(HollowPipelines.HAND_TRAIL)) {
+			return;
+		}
 		int color = module.trailColor.argb();
 		PoseStack pose = new PoseStack();
 		// Samples are stored in camera space; undo the view rotation the hand pass applies.

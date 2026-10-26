@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.1 — Black-screen fix
+
+### Fixed
+- **Black screen at start-up on many graphics cards.**
+  - Cause: the Sky Studio shader defined a helper function named `noise3`, which is also a built-in GLSL function. Strict drivers (most NVIDIA, AMD and Intel drivers) refuse to compile it.
+  - Effect: because the shader was registered as a required pipeline, the failure aborted Minecraft's resource load. Minecraft never opened the title screen and the window stayed black.
+  - Fix: the function is renamed.
+- **Holo's shaders can no longer block start-up.**
+  - They are no longer registered as required pipelines. They compile on first use instead.
+  - If a driver rejects one, only the effect that needs it switches off, and the log explains why. Sky Studio and Motion Blur show as unavailable in the menu; the world overlays skip boxes and lines but keep their labels.
+- Sky shader made portable for strict drivers:
+  - `smoothstep` edges are always in ascending order.
+  - No `pow` on negative numbers.
+  - No local variable shadows a function name.
+  - Guards against `atan(0, 0)`.
+  - A final check so undefined values can never reach the screen.
+
+### Added
+- A unit test that rejects shaders redefining built-in GLSL functions or using reversed `smoothstep` edges.
+- A `prodClient` Gradle task that runs the release jar exactly as players get it.
+
 ## 1.1.0 — Holo: Custom Skies, Main Menu & Loading Screen
 
 The client is now branded **Holo**. Mod id, package names, config folder (`config/hollow/`) and every existing setting are unchanged, so existing configs, keybinds and window layouts carry over as they are.

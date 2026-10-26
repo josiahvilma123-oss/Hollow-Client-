@@ -49,7 +49,7 @@ vec3 hash33(vec3 p) {
     return fract((p.xxy + p.yxx) * p.zyx);
 }
 
-float noise3(vec3 p) {
+float valueNoise(vec3 p) {
     vec3 i = floor(p);
     vec3 f = fract(p);
     f = f * f * (3.0 - 2.0 * f);
@@ -70,7 +70,7 @@ float fbm(vec3 p, int octaves) {
     float amp = 0.5;
     for (int i = 0; i < 5; i++) {
         if (i >= octaves) break;
-        sum += amp * noise3(p);
+        sum += amp * valueNoise(p);
         p = p * 2.03 + vec3(17.1, 9.2, 3.7);
         amp *= 0.5;
     }
@@ -92,7 +92,7 @@ vec3 starLayer(vec3 d, float scale, float threshold, float radius, float time) {
     vec3 centre = normalize(cell + 0.2 + 0.6 * hash33(cell + 7.7));
     float dist = length(d - centre) * scale;
     float r = radius * (0.45 + h.y);
-    float core = smoothstep(r, 0.0, dist);
+    float core = 1.0 - smoothstep(0.0, r, dist);
     float halo = exp(-dist / (r * 2.5)) * 0.25;
     float twinkle = 1.0 - Stars.w * 0.5 * (0.5 + 0.5 * sin(time * (1.5 + h.z * 4.0) + h.y * 40.0));
     vec3 warm = vec3(1.0, 0.82, 0.62);
@@ -116,7 +116,7 @@ vec4 body(vec3 d, vec3 dir, float radius, vec3 color, float glow, float style, f
     float cosD = dot(d, dir);
     if (reach < PI && cosD < cos(reach)) return vec4(0.0);
     float a = acos(clamp(cosD, -1.0, 1.0));
-    float disc = smoothstep(radius, radius * 0.94, a);
+    float disc = 1.0 - smoothstep(radius * 0.94, radius, a);
     vec3 u;
     vec3 v;
     basis(dir, u, v);
@@ -125,11 +125,11 @@ vec4 body(vec3 d, vec3 dir, float radius, vec3 color, float glow, float style, f
 
     if (style > 3.5) {
         // Eclipse: a dark disc with a ragged gold-and-violet corona.
-        float phi = atan(q.y, q.x);
-        float rays = 0.55 + 0.45 * noise3(vec3(phi * 3.0, time * 0.15, 1.0));
+        float phi = atan(q.y, q.x + 1e-6);
+        float rays = 0.55 + 0.45 * valueNoise(vec3(phi * 3.0, time * 0.15, 1.0));
         float corona = exp(-max(a - radius, 0.0) / (radius * (0.35 + 0.5 * rays))) * (1.0 - disc);
         vec3 coronaColor = mix(color, vec3(0.55, 0.3, 0.95), 0.35 + 0.35 * sin(phi * 2.0 + time * 0.1));
-        float rim = smoothstep(radius * 1.06, radius, a) * (1.0 - smoothstep(radius, radius * 0.96, a));
+        float rim = (1.0 - smoothstep(radius, radius * 1.06, a)) * smoothstep(radius * 0.96, radius, a);
         vec3 rgb = coronaColor * (corona * (0.9 + glow) + rim * 2.0) + vec3(0.004, 0.002, 0.006) * disc;
         return vec4(rgb, max(disc, clamp(corona + rim, 0.0, 1.0)));
     }
@@ -140,14 +140,14 @@ vec4 body(vec3 d, vec3 dir, float radius, vec3 color, float glow, float style, f
         float side = phase >= 0.0 ? 1.0 : -1.0;
         float terminator = 1.0 - 2.0 * k;
         float lit = smoothstep(terminator - 0.12, terminator + 0.12, q.x * side);
-        float surface = 0.85 + 0.15 * noise3(vec3(q * 6.0, 3.0));
+        float surface = 0.85 + 0.15 * valueNoise(vec3(q * 6.0, 3.0));
         rgb = color * mix(0.06, 1.0, lit) * surface;
     } else if (style > 1.5) {
         // Halo: soft disc with long, faint rays.
-        float phi = atan(q.y, q.x);
+        float phi = atan(q.y, q.x + 1e-6);
         glowAmount += glow * 0.35 * exp(-a / (radius * 4.0)) * (0.6 + 0.4 * sin(phi * 12.0));
     } else {
-        rgb = color * (0.92 + 0.08 * noise3(vec3(q * 5.0, 1.0)));
+        rgb = color * (0.92 + 0.08 * valueNoise(vec3(q * 5.0, 1.0)));
     }
     return vec4(rgb * disc + color * glowAmount, clamp(disc + glowAmount, 0.0, 1.0));
 }
@@ -167,7 +167,7 @@ vec4 planet(vec3 d, vec4 info, vec4 colorInfo, vec3 sunDir) {
     if (colorInfo.a > 0.5) {
         vec2 rq = mat2(0.94, -0.34, 0.34, 0.94) * q;
         float e = length(vec2(rq.x, rq.y / 0.28));
-        float band = smoothstep(1.35, 1.45, e) * smoothstep(2.25, 2.1, e) * (0.6 + 0.4 * sin(e * 30.0));
+        float band = smoothstep(1.35, 1.45, e) * (1.0 - smoothstep(2.1, 2.25, e)) * (0.6 + 0.4 * sin(e * 30.0));
         if (rq.y > 0.0 || r2 > 1.0) {
             result = vec4(colorInfo.rgb * 0.9, band * 0.7);
         }
@@ -175,14 +175,14 @@ vec4 planet(vec3 d, vec4 info, vec4 colorInfo, vec3 sunDir) {
     if (r2 < 1.0) {
         vec3 n = normalize(u * q.x + v * q.y + dir * sqrt(1.0 - r2));
         float light = 0.12 + 0.88 * max(dot(n, normalize(sunDir + dir * 0.3)), 0.0);
-        float bands = 0.85 + 0.15 * sin(q.y * 14.0 + noise3(vec3(q * 3.0, 2.0)) * 3.0);
-        float edge = smoothstep(1.0, 0.96, r2);
+        float bands = 0.85 + 0.15 * sin(q.y * 14.0 + valueNoise(vec3(q * 3.0, 2.0)) * 3.0);
+        float edge = 1.0 - smoothstep(0.96, 1.0, r2);
         vec3 surface = colorInfo.rgb * light * bands;
         result = vec4(mix(result.rgb * result.a, surface, edge), max(result.a, edge));
         if (colorInfo.a > 0.5) {
             vec2 rq = mat2(0.94, -0.34, 0.34, 0.94) * q;
             float e = length(vec2(rq.x, rq.y / 0.28));
-            float band = smoothstep(1.35, 1.45, e) * smoothstep(2.25, 2.1, e) * (0.6 + 0.4 * sin(e * 30.0));
+            float band = smoothstep(1.35, 1.45, e) * (1.0 - smoothstep(2.1, 2.25, e)) * (0.6 + 0.4 * sin(e * 30.0));
             if (rq.y < 0.0) {
                 result.rgb = mix(result.rgb, colorInfo.rgb * 0.9, band * 0.7);
             }
@@ -212,9 +212,9 @@ float silhouetteHeight(float az, float style) {
         float rnd = hash13(vec3(cell, 2.0, 9.1));
         if (rnd > 0.7) {
             float width = 0.08 + 0.04 * rnd;
-            float body = step(abs(local - 0.5), width);
+            float column = step(abs(local - 0.5), width);
             float tip = max(0.0, 1.0 - abs(local - 0.5) / width) * 0.02;
-            h = body * (0.07 + 0.06 * rnd) + body * tip;
+            h = column * (0.07 + 0.06 * rnd) + column * tip;
         } else if (rnd > 0.45) {
             float roof = step(0.1, local) * step(local, 0.9);
             h = roof * (0.025 + 0.02 * rnd);
@@ -243,8 +243,8 @@ void main() {
 
     // 1. Gradient.
     float up = clamp(d.y, 0.0, 1.0);
-    vec3 color = mix(Horizon.rgb, Zenith.rgb, pow(up, Horizon.a));
-    color = mix(color, Ground.rgb, smoothstep(0.0, -0.25, d.y));
+    vec3 color = mix(Horizon.rgb, Zenith.rgb, pow(max(up, 1e-6), Horizon.a));
+    color = mix(color, Ground.rgb, 1.0 - smoothstep(-0.25, 0.0, d.y));
     vec2 flatDir = normalize(d.xz + 1e-5);
     vec2 sunFlat = normalize(SunDir.xz + 1e-5);
     float toward = 0.45 + 0.55 * max(dot(flatDir, sunFlat), 0.0);
@@ -254,7 +254,7 @@ void main() {
 
     // 2. Texture layer (equirectangular, from a resource pack).
     if (Misc.w > 0.0) {
-        float az = atan(sd.z, sd.x);
+        float az = atan(sd.z, sd.x + 1e-6);
         vec2 uv = vec2(az / (2.0 * PI) + 0.5, 0.5 - asin(clamp(sd.y, -1.0, 1.0)) / PI);
         vec4 tex = texture(SkyTexture, uv);
         color = mix(color, color + tex.rgb, tex.a * Misc.w);
@@ -263,13 +263,14 @@ void main() {
     // 3. Nebula, concentrated in a band like a galactic plane.
     if (NebulaA.a > 0.0 && octaves > 2) {
         vec3 p = sd * (2.2 * NebulaB.a);
-        float band = exp(-pow(dot(sd, normalize(vec3(0.3, 1.0, 0.45))) * 2.2, 2.0));
+        float plane = dot(sd, normalize(vec3(0.3, 1.0, 0.45))) * 2.2;
+        float band = exp(-plane * plane);
         if (band > 0.01) {
             float n = fbm(p + vec3(0.0, time * 0.003, 0.0), octaves);
             float density = pow(clamp(n * 1.35 - 0.25, 0.0, 1.0), 2.2) * band;
             if (density > 0.002) {
                 // The colour mix is low-frequency, so one noise octave is enough, and only where there is nebula.
-                float n2 = noise3(p * 1.7 + 11.0);
+                float n2 = valueNoise(p * 1.7 + 11.0);
                 color += mix(NebulaA.rgb, NebulaB.rgb, clamp(n2 * 1.6 - 0.3, 0.0, 1.0)) * density * NebulaA.a * visibility;
             }
         }
@@ -301,8 +302,8 @@ void main() {
     if (Ring.w > 0.5 && dot(d, MoonDir.xyz) > cos(min(Ring.x * 1.25 + Ring.z * 4.0, 3.0))) {
         float a = acos(clamp(dot(d, MoonDir.xyz), -1.0, 1.0));
         float width = Ring.z;
-        float line = smoothstep(width, 0.0, abs(a - Ring.x));
-        float outer = smoothstep(width * 0.6, 0.0, abs(a - Ring.x * 1.12)) * 0.5;
+        float line = 1.0 - smoothstep(0.0, width, abs(a - Ring.x));
+        float outer = (1.0 - smoothstep(0.0, width * 0.6, abs(a - Ring.x * 1.12))) * 0.5;
         float ornaments = 0.0;
         if (Ring.y > 0.5) {
             vec3 u;
@@ -312,7 +313,7 @@ void main() {
             float seg = fract(phi / (2.0 * PI) * Ring.y);
             float radial = abs(a - Ring.x * 1.06);
             float glyph = step(abs(seg - 0.5), 0.07) * step(radial, width * 3.5);
-            float eye = smoothstep(width * 2.0, 0.0, length(vec2((seg - 0.5) * 0.6, radial * 1.5 - width)));
+            float eye = 1.0 - smoothstep(0.0, width * 2.0, length(vec2((seg - 0.5) * 0.6, radial * 1.5 - width)));
             ornaments = max(glyph * 0.8, eye);
         }
         color += RingColor.rgb * (line + outer + ornaments) * 0.8 * max(visibility, 0.4);
@@ -321,7 +322,7 @@ void main() {
     // 8. Distant silhouettes on the horizon.
     // Silhouettes never rise above ~0.14 rad, so higher pixels skip the trig.
     if (Silhouette.a > 0.5 && d.y < 0.16 && d.y > -0.3) {
-        float az = atan(d.z, d.x);
+        float az = atan(d.z, d.x + 1e-6);
         float elevation = asin(clamp(d.y, -1.0, 1.0));
         float h = silhouetteHeight(az, Silhouette.a);
         if (elevation < h && elevation > -0.3) {
@@ -331,6 +332,10 @@ void main() {
     }
 
     // Brightness and saturation.
+    // Never let an undefined value (driver-dependent maths at singular points) reach the screen.
+    if (any(isnan(color)) || any(isinf(color))) {
+        color = Horizon.rgb;
+    }
     color *= Zenith.a;
     float luma = dot(color, vec3(0.299, 0.587, 0.114));
     color = mix(vec3(luma), color, Ground.a);
