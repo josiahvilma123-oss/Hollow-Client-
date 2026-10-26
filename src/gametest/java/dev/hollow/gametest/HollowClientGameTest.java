@@ -107,7 +107,10 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			// Motion blur during a fast camera turn.
 			context.runOnClient(client -> {
 				MotionBlurModule blur = Hollow.module(MotionBlurModule.class);
-				// Defaults (intensity 0.4, 80ms) at this test's low software-rendered frame rate.
+				// Exaggerated so the effect is visible at this test's ~10 FPS software rendering; at
+				// real frame rates the defaults (0.4, 80ms) give a short, restrained trail.
+				blur.intensity.set(0.9);
+				blur.duration.set(240.0);
 				Hollow.module(BlockFinderModule.class).setEnabled(false);
 				Hollow.module(EntityTracersModule.class).setEnabled(false);
 			});

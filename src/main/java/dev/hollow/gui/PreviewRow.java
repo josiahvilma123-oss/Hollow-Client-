@@ -266,14 +266,15 @@ final class PreviewRow extends Row {
 		int ox = x + w / 2;
 		int oy = y + h / 2 + 4;
 		EntityCategory[] shown = {EntityCategory.HOSTILE, EntityCategory.PASSIVE, EntityCategory.NEUTRAL, EntityCategory.PLAYERS};
-		double radiusX = Math.max(30, w / 2.0 - 120);
-		double radiusY = h / 2.0 - 16;
+		// Two targets on each side, with room for their labels on the outer side.
+		double radiusX = Math.max(40, Math.min(w / 2.0 - 150, 160));
+		double[] angles = {Math.toRadians(205), Math.toRadians(155), Math.toRadians(335), Math.toRadians(25)};
 		for (int i = 0; i < shown.length; i++) {
 			EntityCategory category = shown[i];
 			EntityTracersModule.CategorySettings settings = tracers.category(category);
-			double a = seconds() * 0.25 + i * Math.PI / 2;
-			int tx = ox + (int) Math.round(Math.cos(a) * radiusX);
-			int ty = oy + (int) Math.round(Math.sin(a) * radiusY);
+			double breathe = Math.sin(seconds() * 1.3 + i) * 2;
+			int tx = ox + (int) Math.round(Math.cos(angles[i]) * radiusX);
+			int ty = oy + (int) Math.round(Math.sin(angles[i]) * (h / 2.0 - 18) + breathe);
 			boolean visible = settings.show.get() && (category != EntityCategory.PLAYERS || players);
 			int color = visible ? settings.color.argb() : Theme.OFF;
 			if (visible && tracers.lines.get()) {

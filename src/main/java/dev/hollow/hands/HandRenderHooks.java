@@ -144,7 +144,7 @@ public final class HandRenderHooks {
 		awaitingItemTransform = false;
 		TrailBuffer trail = currentMain ? MAIN_TRAIL : OFF_TRAIL;
 		SCRATCH.set(RenderSystem.getModelViewStack()).mul(pose.last().pose());
-		SCRATCH.transformPosition(NEAR.set(0.55f, 0.55f, 0.5f));
+		SCRATCH.transformPosition(NEAR.set(0.68f, 0.68f, 0.5f));
 		SCRATCH.transformPosition(FAR.set(0.93f, 0.93f, 0.5f));
 		trail.add(module().animator().time(), NEAR.x, NEAR.y, NEAR.z, FAR.x, FAR.y, FAR.z);
 	}

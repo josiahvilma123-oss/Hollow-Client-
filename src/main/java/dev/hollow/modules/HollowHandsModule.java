@@ -51,7 +51,7 @@ public final class HollowHandsModule extends Module {
 
 	public final BoolSetting trails = add("Trails", new BoolSetting("trails", "Swing Trails",
 		"A faint purple ribbon following the item tip during swings.", false));
-	public final ColorSetting trailColor = add("Trails", new ColorSetting("trail_color", "Trail Color", "", 0x99B57BFF));
+	public final ColorSetting trailColor = add("Trails", new ColorSetting("trail_color", "Trail Color", "", 0x66B57BFF));
 	public final NumberSetting trailLength = add("Trails", new NumberSetting("trail_length", "Trail Length",
 		"How long trail segments stay visible.", 140, 60, 400, 10).unit("ms"));
 
