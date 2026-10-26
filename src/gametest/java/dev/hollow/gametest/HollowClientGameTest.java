@@ -28,6 +28,12 @@ import net.minecraft.world.InteractionHand;
 public final class HollowClientGameTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext context) {
+		// Keep CPU-only (software OpenGL) CI machines fast enough to load the world in time.
+		context.runOnClient(client -> {
+			client.options.renderDistance().set(2);
+			client.options.simulationDistance().set(5);
+			client.options.framerateLimit().set(30);
+		});
 		try (TestSingleplayerContext world = context.worldBuilder()
 				.adjustSettings(creator -> creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE))
 				.create()) {
