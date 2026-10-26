@@ -9,6 +9,7 @@ import dev.hollow.detection.BlockResults;
 import dev.hollow.detection.BlockScanner;
 import dev.hollow.detection.EntityTracker;
 import dev.hollow.gui.HollowScreen;
+import dev.hollow.menu.MenuScene;
 import dev.hollow.modules.BlockEspModule;
 import dev.hollow.modules.BlockFinderModule;
 import dev.hollow.modules.EntityTracersModule;
@@ -132,6 +133,8 @@ public final class HollowClient implements ClientModInitializer {
 			// Block tags arrive from the server during login, so tag entries resolve only now.
 			scanner.requestRebuild();
 			Hollow.alerts().clear();
+			// Menu artwork isn't needed in game; free it until the next menu visit.
+			MenuScene.release();
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			scanner.clear();

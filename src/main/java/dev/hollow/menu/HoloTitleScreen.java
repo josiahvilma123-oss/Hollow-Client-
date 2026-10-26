@@ -221,7 +221,6 @@ public final class HoloTitleScreen extends Screen {
 		}
 		String subtitle = "C L I E N T";
 		Draw2D.centered(g, font, subtitle, (int) cx, (int) (logoY + 8 * scale + 5), Colors.fade(Colors.lerp(accent, 0xFFFFFFFF, 0.45f), alpha));
-		Draw2D.scythe(g, cx - 8, logoY - 20, 16, Colors.fade(Colors.lerp(accent, 0xFFFFFFFF, 0.3f), alpha * 0.9f));
 	}
 
 	/**

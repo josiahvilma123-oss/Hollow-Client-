@@ -56,8 +56,11 @@ public final class AmbientParticles {
 			if (a <= 2) {
 				continue;
 			}
-			Draw2D.circle(g, px, py, size[i] * 2.2f, Colors.withAlpha(color, a / 6));
-			Draw2D.circle(g, px, py, size[i] * 0.7f, Colors.withAlpha(color, a));
+			// One soft sprite for the halo and one fill for the core: two GUI elements per particle.
+			float halo = size[i] * 5f;
+			MenuScene.glow(g, px, py, halo, halo, Colors.withAlpha(color, a / 3));
+			float core = Math.max(1f, size[i] * 0.8f);
+			Draw2D.line(g, px - core / 2, py, px + core / 2, py, core, Colors.withAlpha(color, a));
 		}
 	}
 }

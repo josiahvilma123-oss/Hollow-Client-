@@ -1,0 +1,107 @@
+# Changelog
+
+## 1.1.0 — Holo: Custom Skies, Main Menu & Loading Screen
+
+The client is now branded **Holo**. Mod id, package names, config folder (`config/hollow/`) and every existing setting are unchanged, so existing configs, keybinds and window layouts carry over as they are.
+
+### Added
+
+**Holo Sky Studio** (*Studio → Holo Sky Studio*, off by default)
+- A procedural overworld sky drawn by one full-screen shader pass. Its layers:
+  - Gradient and horizon glow.
+  - Optional resource-pack texture.
+  - Nebula band.
+  - Two star layers.
+  - Planets, which can have rings.
+  - Sun and moon styles: disc, halo, crescent, eclipse or hidden.
+  - An ornamental celestial ring.
+  - Distant silhouettes: pyramids, obelisks or spires.
+- Seven original presets:
+  - Anubis Eclipse
+  - Void Realm
+  - Pharaoh's Night
+  - Astral Horizon
+  - Crimson Dusk
+  - Frozen Cosmos
+  - Vanilla Enhanced
+- Preset library:
+  - Search, with a color swatch per preset.
+  - Save, Save As, Rename, Duplicate, Delete and Revert.
+  - Export copies the sky to the clipboard and writes it to `config/hollow/skies/exports/`.
+  - Import reads a sky from the clipboard. It is limited to 64 KB, and the format and values are validated.
+- Simple mode shows the essential controls. *Advanced Controls* shows every parameter.
+- Time mode can follow the day cycle (blending into vanilla or custom day colors) or keep the theme's look at all hours. The sun and moon can follow the game or be pinned for a composed sky.
+- Cloud handling: vanilla, tinted or hidden. Optional fog tint blends terrain into the sky's horizon color.
+- *Restore Vanilla Sky* turns the studio off and keeps all presets.
+
+**Character Studio** (*Studio → Character Studio*)
+- Three original cosmetic sets drawn on your own player:
+  - Pharaoh: nemes, uraeus and collar.
+  - Wraith: hood and cloak.
+  - Hollow Knight: helm, pauldrons and cape.
+- Cosmetics follow the player's animation and show in third person and the inventory.
+- They are client-side only: nobody else sees them and nothing is sent to servers.
+- Live 3D preview while in a world; artwork otherwise.
+
+**Theme Packs** (*Studio → Theme Packs*)
+- Pharaoh, Wraith and Hollow Knight collections. Each one bundles a sky, character set, interface accent, Hollow Hands preset with swing-trail color, and main-menu scene.
+- *Apply Selected Components* changes only what is ticked. *Apply Entire Collection* changes everything. Applying a sky never touches the character or interface, and the reverse holds too.
+
+**Main Menu** (*Client → Main Menu*, on by default)
+- A new title screen:
+  - Animated scenes: Temple of Anubis, Pyramids at Night, Void Realm, the current Sky Studio sky, or a custom image.
+  - Featured character art and drifting particles.
+  - Glowing HOLO logo with a turning celestial ring, and fade-in.
+- Includes everything vanilla offers:
+  - Singleplayer, Multiplayer (with vanilla's disabled reasons) and Realms.
+  - Options, Language, Accessibility, Quit, and Credits & Attribution.
+  - Version information.
+- Plus shortcuts to Character Studio, Sky Studio and Client Settings.
+- Settings: scene, custom image, featured character, accent, lighting, animation intensity (0 stops all motion), particles and decorative effects.
+- Custom backgrounds are PNGs in `config/hollow/backgrounds/`:
+  - They are decoded off the render thread.
+  - The limit is 16–4096 px per side. Missing or invalid files fall back to the temple scene, and the menu preview says why.
+- Other out-of-world menus (world list, options, multiplayer, world loading) use the same backdrop instead of the panorama.
+- *Vanilla Menu* shows Minecraft's own title screen. Turning the module off keeps it permanently. Demo mode always uses vanilla's menu.
+
+**Loading Screen** (*Client → Loading Screen*, on by default)
+- Restyles Minecraft's own loading overlay:
+  - Dark background.
+  - Letter-by-letter logo reveal.
+  - A sundial ring that fills with the real reload progress, plus a circling comet trail.
+  - Particles and a status line with the percentage.
+- It draws with plain fills, so it works during the very first start-up before any font or texture exists.
+- Character artwork appears on resource reloads.
+- Options: animation speed, reduced motion, particles, ring, motion trail, character artwork, and *Skip Fade-Out*. *Skip Fade-Out* hands over to the menu as soon as loading finishes, instead of vanilla's two-second hold and fade.
+- Nothing waits on an animation: the overlay's own completion logic is untouched.
+
+**Performance** (*Client → Performance*)
+- Quality, Balanced and Low Performance profiles. They scale:
+  - Sky detail.
+  - Menu and loading particles.
+  - Decorative effects.
+  - Motion blur and swing trails.
+
+### Changed
+- Visible branding: the menu wordmark, alert prefix (`HOLO ALERT — …`), mod name and keybind category now read Holo.
+- Config format version 2, with an automatic migration. The old file is kept as `hollow.json.v1.bak`.
+- New settings widgets: text fields, button bars and the sky library. All new pages have live preview cards.
+
+### Performance notes
+- The sky is one full-screen fragment pass, replacing vanilla's sky, sun, moon and star draws.
+  - Uniforms are uploaded through a ring buffer and repacked only when a value changes.
+  - *Detail: Low* skips the nebula noise and the second star layer.
+- Menu and loading animations allocate nothing per frame: particles, stars and status strings are preallocated. They only advance while a menu is on screen.
+- Menu textures (glow sprite, custom background) are freed when you join a world. Sky GPU buffers are freed when Sky Studio is turned off.
+- Measured results are listed in the README under *Performance*.
+
+### Compatibility
+- New mixins:
+  - `LoadingOverlayMixin`
+  - `MinecraftMixin` (`setScreen`)
+  - `ScreenMixin` (`renderPanorama`)
+  - `SkyRendererMixin`
+  - `FogRendererMixin`
+  - `CloudRendererMixin`
+- All of them are optional (`defaultRequire: 0`), and each passes straight through when its module is off. See the README's mixin table.
+- Sky Studio stands aside while an Iris shader pack is active. It only replaces the overworld sky; the Nether, the End and modded dimensions keep their own skies.

@@ -110,6 +110,15 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				context.takeScreenshot(String.format("hollow-%02d-gui-%s", index++, id));
 			}
 
+			// Sky Studio's library and management rows (search narrows the page to them).
+			context.runOnClient(client -> Hollow.module(SkyStudioModule.class).setEnabled(true));
+			context.setScreen(() -> new HollowScreen(null).openOn(SkyStudioModule.class));
+			context.waitTicks(8);
+			context.getInput().typeChars("library");
+			context.waitTicks(8);
+			context.takeScreenshot(String.format("hollow-%02d-gui-sky-library", index++));
+			context.runOnClient(client -> Hollow.module(SkyStudioModule.class).setEnabled(false));
+
 			// Search filters the module list.
 			context.setScreen(() -> new HollowScreen(null));
 			context.waitTicks(8);
@@ -308,6 +317,8 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 		});
 		context.waitTicks(10);
 
+		measureMenuCost(context);
+
 		// Resource reload shows the Holo loading screen; it must hand back to the menu by itself.
 		long[] reloadStart = new long[1];
 		context.runOnClient(client -> {
@@ -327,22 +338,77 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 		context.waitTicks(10);
 	}
 
-	/** Frame rate with Sky Studio off and on, at an uncapped frame rate. Software rendering, so only the ratio means anything. */
+	/**
+	 * Time to render one frame with Sky Studio off and in several configurations. The harness
+	 * steps frames in lockstep with ticks, so FPS is meaningless here; instead frames are rendered
+	 * back to back with glFinish so the (software) GPU work counts. Configurations are interleaved
+	 * over three rounds and the best round is kept, which filters out machine noise.
+	 */
 	private static void measureSkyCost(ClientGameTestContext context) {
-		int[] fps = new int[2];
-		for (int pass = 0; pass < 2; pass++) {
-			boolean on = pass == 1;
-			context.runOnClient(client -> {
-				client.options.framerateLimit().set(260);
-				Hollow.module(SkyStudioModule.class).setEnabled(on);
-				Hollow.module(SkyStudioModule.class).applyPreset("Anubis Eclipse");
-			});
-			context.waitTicks(50);
-			int slot = pass;
-			context.runOnClient(client -> fps[slot] = client.getFps());
+		String[] labels = {"off", "Anubis Eclipse (high detail)", "Anubis Eclipse (low detail)", "Vanilla Enhanced (high detail)"};
+		double[] best = new double[labels.length];
+		java.util.Arrays.fill(best, Double.MAX_VALUE);
+		for (int round = 0; round < 3; round++) {
+			for (int pass = 0; pass < labels.length; pass++) {
+				int slot = pass;
+				context.runOnClient(client -> {
+					SkyStudioModule sky = Hollow.module(SkyStudioModule.class);
+					sky.setEnabled(slot > 0);
+					sky.applyPreset(slot == 3 ? "Vanilla Enhanced" : "Anubis Eclipse");
+					sky.detail.set(slot == 2 ? dev.hollow.sky.SkyEnums.Detail.LOW : dev.hollow.sky.SkyEnums.Detail.HIGH);
+				});
+				context.waitTicks(3);
+				context.runOnClient(client -> best[slot] = Math.min(best[slot], frameMillis(client, 30)));
+			}
 		}
-		context.runOnClient(client -> client.options.framerateLimit().set(30));
-		Hollow.LOGGER.info("[gametest] FPS with Sky Studio off: {}, on: {}", fps[0], fps[1]);
+		context.runOnClient(client -> Hollow.module(SkyStudioModule.class).detail.set(dev.hollow.sky.SkyEnums.Detail.HIGH));
+		for (int i = 0; i < labels.length; i++) {
+			Hollow.LOGGER.info("[gametest] Frame time, Sky Studio {}: {} ms", labels[i], String.format(java.util.Locale.ROOT, "%.2f", best[i]));
+		}
+	}
+
+	/** Same measurement for the title screen: vanilla's, Holo's, and Holo's without particles and decorations. */
+	private static void measureMenuCost(ClientGameTestContext context) {
+		String[] labels = {"vanilla title screen", "Holo title screen", "Holo title screen without particles/decorations"};
+		double[] best = new double[labels.length];
+		java.util.Arrays.fill(best, Double.MAX_VALUE);
+		for (int round = 0; round < 3; round++) {
+			for (int pass = 0; pass < labels.length; pass++) {
+				int slot = pass;
+				if (slot == 0) {
+					context.runOnClient(client -> TitleScreenSwap.showVanilla());
+				} else {
+					context.runOnClient(client -> {
+						MainMenuModule menu = Hollow.module(MainMenuModule.class);
+						menu.particles.set(slot == 1);
+						menu.decorations.set(slot == 1);
+						client.setScreen(new TitleScreen());
+					});
+				}
+				context.waitTicks(25);
+				context.runOnClient(client -> best[slot] = Math.min(best[slot], frameMillis(client, 30)));
+			}
+		}
+		context.runOnClient(client -> {
+			MainMenuModule menu = Hollow.module(MainMenuModule.class);
+			menu.particles.set(true);
+			menu.decorations.set(true);
+			client.setScreen(new TitleScreen());
+		});
+		for (int i = 0; i < labels.length; i++) {
+			Hollow.LOGGER.info("[gametest] Frame time, {}: {} ms", labels[i], String.format(java.util.Locale.ROOT, "%.2f", best[i]));
+		}
+	}
+
+	private static double frameMillis(net.minecraft.client.Minecraft client, int frames) {
+		client.gameRenderer.render(client.getDeltaTracker(), true);
+		org.lwjgl.opengl.GL11.glFinish();
+		long start = System.nanoTime();
+		for (int i = 0; i < frames; i++) {
+			client.gameRenderer.render(client.getDeltaTracker(), true);
+			org.lwjgl.opengl.GL11.glFinish();
+		}
+		return (System.nanoTime() - start) / 1e6 / frames;
 	}
 
 	private static void buildScene(TestSingleplayerContext world) {

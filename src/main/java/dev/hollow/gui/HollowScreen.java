@@ -72,8 +72,11 @@ public final class HollowScreen extends Screen {
 				}
 				String id = category.name().toLowerCase(Locale.ROOT);
 				int[] saved = settings.windowPosition(id);
+				// Without a saved layout, windows that would run off a small screen start collapsed.
+				boolean collapsed = saved != null ? saved[2] == 1
+					: nextY + new CategoryWindow(category, 0, 0, false).height("") > height - 24;
 				CategoryWindow window = new CategoryWindow(category, saved != null ? saved[0] : 16, saved != null ? saved[1] : nextY,
-					saved != null && saved[2] == 1);
+					collapsed);
 				windows.add(window);
 				nextY += window.height("") + 12;
 			}

@@ -111,7 +111,11 @@ void basis(vec3 n, out vec3 u, out vec3 v) {
 // Returns rgb + alpha for a celestial body of the given style.
 vec4 body(vec3 d, vec3 dir, float radius, vec3 color, float glow, float style, float phase, float time) {
     if (style < 0.5 || radius <= 0.0) return vec4(0.0);
-    float a = acos(clamp(dot(d, dir), -1.0, 1.0));
+    // Skip pixels beyond the reach of the body's glow (halo rays reach furthest).
+    float reach = radius * (style > 1.5 && style < 2.5 ? 26.0 : 10.0);
+    float cosD = dot(d, dir);
+    if (reach < PI && cosD < cos(reach)) return vec4(0.0);
+    float a = acos(clamp(cosD, -1.0, 1.0));
     float disc = smoothstep(radius, radius * 0.94, a);
     vec3 u;
     vec3 v;
@@ -151,11 +155,12 @@ vec4 body(vec3 d, vec3 dir, float radius, vec3 color, float glow, float style, f
 vec4 planet(vec3 d, vec4 info, vec4 colorInfo, vec3 sunDir) {
     if (info.w <= 0.0) return vec4(0.0);
     vec3 dir = normalize(info.xyz);
+    // The ring reaches 2.25 radii; nothing is drawn beyond that.
+    if (dot(d, dir) < cos(min(info.w * 2.4, 1.5))) return vec4(0.0);
     vec3 u;
     vec3 v;
     basis(dir, u, v);
     vec2 q = vec2(dot(d, u), dot(d, v)) / info.w;
-    if (dot(d, dir) < 0.0) return vec4(0.0);
     float r2 = dot(q, q);
     vec4 result = vec4(0.0);
     // Ring behind the planet.
@@ -258,11 +263,16 @@ void main() {
     // 3. Nebula, concentrated in a band like a galactic plane.
     if (NebulaA.a > 0.0 && octaves > 2) {
         vec3 p = sd * (2.2 * NebulaB.a);
-        float n = fbm(p + vec3(0.0, time * 0.003, 0.0), octaves);
-        float n2 = fbm(p * 1.7 + 11.0, max(octaves - 1, 1));
         float band = exp(-pow(dot(sd, normalize(vec3(0.3, 1.0, 0.45))) * 2.2, 2.0));
-        float density = pow(clamp(n * 1.35 - 0.25, 0.0, 1.0), 2.2) * band;
-        color += mix(NebulaA.rgb, NebulaB.rgb, clamp(n2 * 1.6 - 0.3, 0.0, 1.0)) * density * NebulaA.a * visibility;
+        if (band > 0.01) {
+            float n = fbm(p + vec3(0.0, time * 0.003, 0.0), octaves);
+            float density = pow(clamp(n * 1.35 - 0.25, 0.0, 1.0), 2.2) * band;
+            if (density > 0.002) {
+                // The colour mix is low-frequency, so one noise octave is enough, and only where there is nebula.
+                float n2 = noise3(p * 1.7 + 11.0);
+                color += mix(NebulaA.rgb, NebulaB.rgb, clamp(n2 * 1.6 - 0.3, 0.0, 1.0)) * density * NebulaA.a * visibility;
+            }
+        }
     }
 
     // 4. Stars (two layers; the fine layer is skipped on low detail).
@@ -288,7 +298,7 @@ void main() {
     color = color * (1.0 - moon.a * 0.9) + moon.rgb * max(visibility, 0.35);
 
     // 7. Celestial ring with glyph ornaments around the moon.
-    if (Ring.w > 0.5) {
+    if (Ring.w > 0.5 && dot(d, MoonDir.xyz) > cos(min(Ring.x * 1.25 + Ring.z * 4.0, 3.0))) {
         float a = acos(clamp(dot(d, MoonDir.xyz), -1.0, 1.0));
         float width = Ring.z;
         float line = smoothstep(width, 0.0, abs(a - Ring.x));
@@ -309,7 +319,8 @@ void main() {
     }
 
     // 8. Distant silhouettes on the horizon.
-    if (Silhouette.a > 0.5) {
+    // Silhouettes never rise above ~0.14 rad, so higher pixels skip the trig.
+    if (Silhouette.a > 0.5 && d.y < 0.16 && d.y > -0.3) {
         float az = atan(d.z, d.x);
         float elevation = asin(clamp(d.y, -1.0, 1.0));
         float h = silhouetteHeight(az, Silhouette.a);

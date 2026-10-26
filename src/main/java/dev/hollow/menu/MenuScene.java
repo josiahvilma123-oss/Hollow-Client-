@@ -207,12 +207,12 @@ public final class MenuScene {
 			if (scene == Scene.TEMPLE) {
 				glow(g, mx, my, r * 7, r * 7, Colors.withAlpha(accent, (int) (110 * Math.min(1.3f, lighting))));
 				glow(g, mx, my, r * 3.2f, r * 3.2f, Colors.withAlpha(Colors.lerp(accent, 0xFFFFFFFF, 0.5f), (int) (200 * Math.min(1f, lighting))));
-				Draw2D.circle(g, mx, my, r * 1.06f, Colors.withAlpha(Colors.lerp(accent, 0xFFFFFFFF, 0.7f), 230));
-				Draw2D.circle(g, mx, my, r, 0xFF050308);
+				disc(g, mx, my, r * 1.06f, Colors.withAlpha(Colors.lerp(accent, 0xFFFFFFFF, 0.7f), 230));
+				disc(g, mx, my, r, 0xFF050308);
 			} else {
 				glow(g, mx, my, r * 6, r * 6, Colors.withAlpha(0xFFE8D9B0, (int) (70 * Math.min(1.3f, lighting))));
-				Draw2D.circle(g, mx, my, r, 0xFFEDE3CF);
-				Draw2D.circle(g, mx + r * 0.32f, my - r * 0.18f, r * 0.82f, Colors.withAlpha(top, 235));
+				disc(g, mx, my, r, 0xFFEDE3CF);
+				disc(g, mx + r * 0.32f, my - r * 0.18f, r * 0.82f, Colors.withAlpha(top, 235));
 			}
 			if (decorations) {
 				// Slowly sweeping light rays from the moon.
@@ -280,10 +280,17 @@ public final class MenuScene {
 	private static void drawCharacter(GuiGraphics g, Cosmetic cosmetic, int w, int h, int leftBound, float px, float lighting) {
 		int drawHeight = (int) Math.min(h * 0.66f, 300);
 		int drawWidth = drawHeight * 504 / 648;
-		float centerX = Math.max(w * 0.8f, leftBound + drawWidth * 0.5f);
-		if (centerX + drawWidth * 0.4f > w || drawHeight < 90) {
+		// Shrink to the space right of the menu column; hide when there's too little room.
+		int room = w - leftBound - 6;
+		if (drawWidth > room) {
+			drawWidth = room;
+			drawHeight = drawWidth * 648 / 504;
+		}
+		if (drawWidth < 70) {
 			return;
 		}
+		float centerX = Math.max(w * 0.8f, leftBound + drawWidth * 0.5f);
+		centerX = Math.min(centerX, w - drawWidth * 0.5f);
 		float bob = (float) Math.sin(time * 0.8f) * 3f;
 		float x = centerX - drawWidth / 2f - px * 22;
 		float y = h - drawHeight - h * 0.04f + bob;
@@ -295,6 +302,12 @@ public final class MenuScene {
 		pose.translate(x, y);
 		g.blit(RenderPipelines.GUI_TEXTURED, art, 0, 0, 0, 0, drawWidth, drawHeight, 504, 648, 504, 648);
 		pose.popMatrix();
+	}
+
+	/** An anti-aliased disc, drawn as one textured quad pair. */
+	private static void disc(GuiGraphics g, float x, float y, float radius, int color) {
+		int size = Math.round(radius * 2);
+		Pill.fill(g, Math.round(x - radius), Math.round(y - radius), size, size, color);
 	}
 
 	/** A soft radial glow centered at (x, y), tinted by {@code color}. */
@@ -341,6 +354,7 @@ public final class MenuScene {
 			glowTexture = null;
 		}
 		MenuBackgrounds.release();
+		Pill.release();
 		shown = null;
 	}
 }

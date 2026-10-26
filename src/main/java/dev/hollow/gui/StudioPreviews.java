@@ -3,6 +3,7 @@ package dev.hollow.gui;
 import dev.hollow.Hollow;
 import dev.hollow.character.Cosmetic;
 import dev.hollow.core.util.Colors;
+import dev.hollow.menu.MenuBackgrounds;
 import dev.hollow.menu.MenuScene;
 import dev.hollow.menu.PixelFont;
 import dev.hollow.modules.CharacterStudioModule;
@@ -209,6 +210,9 @@ final class StudioPreviews {
 		g.disableScissor();
 		Draw2D.border(g, ox, sy, mw, mh, ui.c(Theme.BORDER_SOFT));
 		String state = menu.isEnabled() ? menu.scene.get().displayName() : "Off · vanilla title screen";
+		if (menu.isEnabled() && menu.scene.get() == MainMenuModule.Scene.CUSTOM && !MenuBackgrounds.error().isEmpty()) {
+			state = MenuBackgrounds.error() + " · showing the temple";
+		}
 		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, state, w - 12), x + 6, y + h - 11, ui.c(menu.isEnabled() ? ui.accentLight : Theme.TEXT_DIM));
 	}
 

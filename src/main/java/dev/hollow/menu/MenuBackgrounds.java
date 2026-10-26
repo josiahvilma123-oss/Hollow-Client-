@@ -24,7 +24,7 @@ public final class MenuBackgrounds {
 	private static DynamicTexture texture;
 	private static int width;
 	private static int height;
-	private static String error = "";
+	private static volatile String error = "";
 
 	private MenuBackgrounds() {
 	}
@@ -46,8 +46,8 @@ public final class MenuBackgrounds {
 	/** The custom background texture once it is ready, otherwise null (callers use their fallback). */
 	public static Identifier custom(String fileName) {
 		if (!fileName.equals(requested)) {
-			requested = fileName;
 			release();
+			requested = fileName;
 			error = "";
 			Path file = directory().resolve(fileName).normalize();
 			if (!file.startsWith(directory())) {
@@ -99,8 +99,17 @@ public final class MenuBackgrounds {
 		}
 	}
 
-	/** Frees the uploaded texture. */
+	/** Frees the uploaded texture; it is read again the next time it is needed. */
 	public static void release() {
+		requested = "";
+		if (pending != null) {
+			pending.thenAccept(image -> {
+				if (image != null) {
+					image.close();
+				}
+			});
+			pending = null;
+		}
 		if (texture != null) {
 			Minecraft.getInstance().getTextureManager().release(CUSTOM);
 			texture = null;

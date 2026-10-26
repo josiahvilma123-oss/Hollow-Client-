@@ -1,7 +1,6 @@
 package dev.hollow.menu;
 
 import dev.hollow.core.util.Colors;
-import dev.hollow.render.Draw2D;
 import dev.hollow.render.Theme;
 import java.util.function.IntSupplier;
 import net.minecraft.client.Minecraft;
@@ -36,14 +35,13 @@ public final class HoloButton extends Button {
 		boolean highlighted = isHoveredOrFocused() && active;
 		hover += ((highlighted ? 1f : 0f) - hover) * Math.min(1f, delta * 12f);
 		int accentColor = accent.getAsInt();
-		float radius = getHeight() / 2f;
 		int fill = Colors.lerp(0xE0120E19, Colors.lerp(accentColor, 0xFF000000, 0.35f), hover * 0.85f);
 		if (hover > 0.02f) {
-			Draw2D.glow(g, getX(), getY(), getWidth(), getHeight(), radius, Colors.fade(Colors.withAlpha(accentColor, 170), hover * alpha), 6, 1f);
+			MenuScene.glow(g, getX() + getWidth() / 2f, getY() + getHeight() / 2f, getWidth() + 28, getHeight() + 22,
+				Colors.fade(Colors.withAlpha(accentColor, 150), hover * alpha));
 		}
-		Draw2D.rounded(g, getX(), getY(), getWidth(), getHeight(), radius, Colors.fade(fill, alpha));
-		Draw2D.roundedBorder(g, getX(), getY(), getWidth(), getHeight(), radius, 1,
-			Colors.fade(Colors.lerp(Theme.BORDER, accentColor, 0.25f + hover * 0.75f), alpha));
+		Pill.fill(g, getX(), getY(), getWidth(), getHeight(), Colors.fade(fill, alpha));
+		Pill.border(g, getX(), getY(), getWidth(), getHeight(), Colors.fade(Colors.lerp(Theme.BORDER, accentColor, 0.25f + hover * 0.75f), alpha));
 		int textColor = active ? Colors.lerp(Theme.TEXT_DIM, 0xFFFFFFFF, hover) : Theme.TEXT_FAINT;
 		var font = Minecraft.getInstance().font;
 		String text = getMessage().getString();
