@@ -143,4 +143,23 @@ class ConfigManagerTest {
 		assertTrue(module.matches("toggle key"));
 		assertFalse(module.matches("zzz"));
 	}
+
+	@Test
+	void migratesVersionOneConfigKeepingValues(@TempDir Path dir) throws IOException {
+		Path file = dir.resolve("hollow.json");
+		Files.writeString(file, """
+			{"version":1,"modules":{"m":{"enabled":true,"settings":{"range":50}}}}
+			""", StandardCharsets.UTF_8);
+		ModuleManager modules = new ModuleManager();
+		TestModule module = modules.register(new TestModule("m", false));
+		TestModule added = modules.register(new TestModule("new_module", true));
+		ConfigManager config = new ConfigManager(file, modules, () -> 0, 0, log::add);
+		config.load();
+		assertTrue(module.isEnabled());
+		assertEquals(50.0, module.range.get());
+		assertTrue(added.isEnabled());
+		assertTrue(Files.exists(dir.resolve("hollow.json.v1.bak")));
+		config.tick();
+		assertTrue(Files.readString(file).contains("\"version\": 2"));
+	}
 }

@@ -25,7 +25,13 @@ import java.util.function.Consumer;
  * damaged file is backed up instead of crashing the client.
  */
 public final class ConfigManager {
-	public static final int VERSION = 1;
+	/**
+	 * Config schema version. History:
+	 * 1 - initial release (visuals, detection, alerts).
+	 * 2 - Holo update: Sky Studio, Character Studio, theme packs, main menu, loading screen,
+	 *     performance. Existing module settings are untouched; new modules start at defaults.
+	 */
+	public static final int VERSION = 2;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	private final Path file;
@@ -97,6 +103,11 @@ public final class ConfigManager {
 			applyDefaults();
 			return;
 		}
+		int version = root.has("version") && root.get("version").isJsonPrimitive() ? root.get("version").getAsInt() : 1;
+		if (version < VERSION) {
+			backupBeforeMigration(version);
+			root = ConfigMigrations.migrate(root, version, log);
+		}
 		loading = true;
 		try {
 			JsonObject moduleObjects = root.has("modules") && root.get("modules").isJsonObject()
@@ -112,7 +123,17 @@ public final class ConfigManager {
 		} finally {
 			loading = false;
 		}
-		dirtySince = -1;
+		dirtySince = version < VERSION ? clock.millis() : -1;
+	}
+
+	private void backupBeforeMigration(int version) {
+		Path backup = file.resolveSibling(file.getFileName() + ".v" + version + ".bak");
+		try {
+			Files.copy(file, backup, StandardCopyOption.REPLACE_EXISTING);
+			log.accept("Migrating config from version " + version + " to " + VERSION + "; previous file kept at " + backup);
+		} catch (IOException e) {
+			log.accept("Could not back up config before migration: " + e.getMessage());
+		}
 	}
 
 	private void loadModule(Module module, JsonObject object) {

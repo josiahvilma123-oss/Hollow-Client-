@@ -115,6 +115,17 @@ public abstract class Setting<T> {
 
 	public abstract JsonElement toJson();
 
+	/** The default value in config form, computed without touching the current value or listeners. */
+	public final JsonElement defaultJson() {
+		T saved = value;
+		value = defaultValue;
+		try {
+			return toJson();
+		} finally {
+			value = saved;
+		}
+	}
+
 	/** Loads a value from JSON. Invalid input is ignored so a damaged config never crashes the client. */
 	public abstract void fromJson(JsonElement json);
 }

@@ -5,11 +5,14 @@
 	"compatibilityLevel": "JAVA_21",
 	"client": [
 		"ClientLevelMixin",
+		"CloudRendererMixin",
+		"FogRendererMixin",
 		"GameRendererMixin",
 		"ItemInHandRendererMixin",
 		"ItemLayerRenderStateMixin",
 		"LevelRendererMixin",
-		"LivingEntityAccessor"
+		"LivingEntityAccessor",
+		"SkyRendererMixin"
 	],
 	"injectors": {
 		"defaultRequire": 0

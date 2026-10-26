@@ -31,6 +31,11 @@ public final class ScreenProjector {
 		valid = true;
 	}
 
+	/** Inverse of this frame's projection * view, for reconstructing view rays in the sky shader. */
+	public Matrix4f inverseViewProjection(Matrix4f dest) {
+		return viewProjection.invert(dest);
+	}
+
 	public void invalidate() {
 		valid = false;
 	}

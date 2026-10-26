@@ -21,6 +21,14 @@ import dev.hollow.render.HollowPipelines;
 import dev.hollow.render.HudOverlay;
 import dev.hollow.render.ScreenProjector;
 import dev.hollow.render.WorldOverlayRenderer;
+import dev.hollow.modules.SkyStudioModule;
+import dev.hollow.sky.HoloSkyRenderer;
+import dev.hollow.sky.SkyPresetStore;
+import dev.hollow.sky.SkyPresets;
+import net.fabricmc.fabric.api.resource.v1.ResourceLoader;
+import net.fabricmc.fabric.api.resource.v1.reloader.SimpleResourceReloader;
+import net.minecraft.server.packs.PackType;
+import net.minecraft.server.packs.resources.PreparableReloadListener;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientChunkEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -51,6 +59,7 @@ public final class HollowClient implements ClientModInitializer {
 		modules.register(new EntityTracersModule());
 		modules.register(new HollowAlertsModule());
 		modules.register(new InterfaceModule());
+		SkyStudioModule skyStudio = modules.register(new SkyStudioModule());
 		modules.register(new ServerRulesModule());
 		Hollow.modules = modules;
 
@@ -61,6 +70,22 @@ public final class HollowClient implements ClientModInitializer {
 		Hollow.entities = entities;
 		Hollow.alerts = new AlertService(() -> modules.get(HollowAlertsModule.class));
 		WorldOverlayRenderer.INSTANCE.setBlockResults(blockResults);
+
+		SkyPresetStore skyPresets = new SkyPresetStore(FabricLoader.getInstance().getConfigDir().resolve("hollow").resolve("skies"),
+			SkyPresets.builtIns(skyStudio.defaultValues()), Hollow.LOGGER::warn);
+		skyPresets.load();
+		Hollow.skyPresets = skyPresets;
+		ResourceLoader.get(PackType.CLIENT_RESOURCES).registerReloader(id("sky_textures"), new SimpleResourceReloader<Void>() {
+			@Override
+			protected Void prepare(PreparableReloadListener.SharedState store) {
+				return null;
+			}
+
+			@Override
+			protected void apply(Void prepared, PreparableReloadListener.SharedState store) {
+				HoloSkyRenderer.INSTANCE.onResourcesReloaded();
+			}
+		});
 
 		ConfigManager config = new ConfigManager(FabricLoader.getInstance().getConfigDir().resolve("hollow").resolve("hollow.json"),
 			modules, Clock.SYSTEM, 750, Hollow.LOGGER::warn);

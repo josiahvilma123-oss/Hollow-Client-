@@ -13,6 +13,8 @@ import dev.hollow.modules.HollowHandsModule;
 import dev.hollow.modules.InterfaceModule;
 import dev.hollow.modules.MotionBlurModule;
 import dev.hollow.modules.ServerRulesModule;
+import dev.hollow.modules.SkyStudioModule;
+import dev.hollow.sky.SkyPresetStore;
 import dev.hollow.render.WorldOverlayRenderer;
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -147,6 +149,19 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			});
 			context.waitTicks(5);
 			context.takeScreenshot(String.format("hollow-%02d-hands-positioned", index++));
+
+			// Holo Sky Studio: every built-in preset, looking toward the sky.
+			context.runOnClient(client -> {
+				client.player.setXRot(-18f);
+				client.player.setYRot(180f);
+			});
+			context.runOnClient(client -> Hollow.module(SkyStudioModule.class).setEnabled(true));
+			for (SkyPresetStore.Preset preset : Hollow.skyPresets().builtIns()) {
+				context.runOnClient(client -> Hollow.module(SkyStudioModule.class).applyPreset(preset.name()));
+				context.waitTicks(4);
+				context.takeScreenshot(String.format("hollow-%02d-sky-%s", index++, SkyPresetStore.slug(preset.name())));
+			}
+			context.runOnClient(client -> Hollow.module(SkyStudioModule.class).setEnabled(false));
 
 			// Disabling every module restores vanilla rendering.
 			context.runOnClient(client -> {

@@ -67,6 +67,16 @@ public final class HollowPipelines {
 		.withoutBlend()
 		.build());
 
+	/** Holo Sky Studio: the whole sky in one full-screen procedural pass. */
+	public static final RenderPipeline HOLO_SKY = RenderPipelines.register(RenderPipeline.builder(RenderPipelines.POST_PROCESSING_SNIPPET)
+		.withLocation(id("pipeline/holo_sky"))
+		.withVertexShader("core/screenquad")
+		.withFragmentShader(id("sky/holo_sky"))
+		.withSampler("SkyTexture")
+		.withUniform("HoloSky", UniformType.UNIFORM_BUFFER)
+		.withoutBlend()
+		.build());
+
 	public static final RenderType LINES_SEE_THROUGH_TYPE = RenderType.create("hollow_lines_see_through",
 		RenderSetup.builder(LINES_SEE_THROUGH).createRenderSetup());
 	public static final RenderType LINES_DEPTH_TYPE = RenderType.create("hollow_lines_depth",

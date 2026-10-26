@@ -19,6 +19,7 @@ public final class Hollow {
 	static AlertService alerts;
 	static BlockScanner scanner;
 	static EntityTracker entities;
+	static dev.hollow.sky.SkyPresetStore skyPresets;
 
 	private Hollow() {
 	}
@@ -41,6 +42,10 @@ public final class Hollow {
 
 	public static EntityTracker entities() {
 		return entities;
+	}
+
+	public static dev.hollow.sky.SkyPresetStore skyPresets() {
+		return skyPresets;
 	}
 
 	public static <M extends dev.hollow.core.module.Module> M module(Class<M> type) {

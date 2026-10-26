@@ -2,6 +2,7 @@ package dev.hollow.core.module;
 
 public enum Category {
 	VISUALS_DETECTION("Visuals & Detection", "Motion blur, hand animations, block and entity detection"),
+	STUDIO("Studio", "Skies, characters and coordinated theme packs"),
 	CLIENT("Client", "Interface and server rule settings");
 
 	private final String displayName;
