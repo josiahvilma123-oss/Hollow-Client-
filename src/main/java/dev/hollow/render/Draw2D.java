@@ -1,6 +1,7 @@
 package dev.hollow.render;
 
 import dev.hollow.core.util.Colors;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import org.joml.Matrix3x2fStack;
@@ -10,35 +11,162 @@ public final class Draw2D {
 	private Draw2D() {
 	}
 
-	/** A filled rectangle with softened (1px cut) corners. */
+	/** Default corner radius for panels, in GUI pixels. */
+	public static final float RADIUS = 3f;
+
+	/** A filled rectangle with Hollow's default rounded corners. */
 	public static void panel(GuiGraphics g, int x, int y, int w, int h, int color) {
-		if (w <= 2 || h <= 2) {
-			g.fill(x, y, x + w, y + h, color);
-			return;
-		}
-		g.fill(x + 1, y, x + w - 1, y + h, color);
-		g.fill(x, y + 1, x + 1, y + h - 1, color);
-		g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+		rounded(g, x, y, w, h, RADIUS, color);
 	}
 
-	/** A 1px border with softened corners. */
+	/** A 1px border with Hollow's default rounded corners. */
 	public static void border(GuiGraphics g, int x, int y, int w, int h, int color) {
-		g.fill(x + 1, y, x + w - 1, y + 1, color);
-		g.fill(x + 1, y + h - 1, x + w - 1, y + h, color);
-		g.fill(x, y + 1, x + 1, y + h - 1, color);
-		g.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+		roundedBorder(g, x, y, w, h, RADIUS, 1f, color);
 	}
 
-	/** A soft outer glow made of concentric, fading borders. */
+	/** A soft outer glow made of concentric, fading rounded rings. */
 	public static void glow(GuiGraphics g, int x, int y, int w, int h, int color, int radius, float strength) {
+		glow(g, x, y, w, h, RADIUS, color, radius, strength);
+	}
+
+	public static void glow(GuiGraphics g, float x, float y, float w, float h, float cornerRadius, int color, int radius, float strength) {
 		for (int i = 1; i <= radius; i++) {
 			float t = 1f - (float) i / (radius + 1);
 			int alpha = Math.round(Colors.alpha(color) * strength * t * t * 0.55f);
 			if (alpha <= 0) {
 				continue;
 			}
-			border(g, x - i, y - i, w + i * 2, h + i * 2, Colors.withAlpha(color, alpha));
+			roundedBorder(g, x - i, y - i, w + i * 2, h + i * 2, cornerRadius + i, 1f, Colors.withAlpha(color, alpha));
 		}
+	}
+
+	public static void circle(GuiGraphics g, float centerX, float centerY, float radius, int color) {
+		rounded(g, centerX - radius, centerY - radius, radius * 2, radius * 2, radius, color);
+	}
+
+	/**
+	 * Filled rounded rectangle. Drawn in real screen pixels (not GUI pixels) with anti-aliased
+	 * corner edges, so corners stay smooth at every GUI scale.
+	 */
+	public static void rounded(GuiGraphics g, float x, float y, float w, float h, float radius, int color) {
+		if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) {
+			return;
+		}
+		float scale = guiScale();
+		int px = Math.round(x * scale);
+		int py = Math.round(y * scale);
+		int pw = Math.round((x + w) * scale) - px;
+		int ph = Math.round((y + h) * scale) - py;
+		if (pw <= 0 || ph <= 0) {
+			return;
+		}
+		float r = Math.min(radius * scale, Math.min(pw, ph) / 2f);
+		Matrix3x2fStack pose = g.pose();
+		pose.pushMatrix();
+		pose.scale(1f / scale, 1f / scale);
+		if (r < 1f) {
+			g.fill(px, py, px + pw, py + ph, color);
+			pose.popMatrix();
+			return;
+		}
+		int rows = (int) Math.ceil(r);
+		if (ph - rows * 2 > 0) {
+			g.fill(px, py + rows, px + pw, py + ph - rows, color);
+		}
+		for (int row = 0; row < rows; row++) {
+			float inset = cornerInset(r, row);
+			int solid = (int) Math.ceil(inset);
+			float coverage = solid - inset;
+			int top = py + row;
+			int bottom = py + ph - 1 - row;
+			drawSpan(g, px, pw, solid, coverage, top, color);
+			if (bottom != top) {
+				drawSpan(g, px, pw, solid, coverage, bottom, color);
+			}
+		}
+		pose.popMatrix();
+	}
+
+	/** Rounded outline of the given thickness (GUI pixels), anti-aliased on the outer edge. */
+	public static void roundedBorder(GuiGraphics g, float x, float y, float w, float h, float radius, float thickness, int color) {
+		if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) {
+			return;
+		}
+		float scale = guiScale();
+		int px = Math.round(x * scale);
+		int py = Math.round(y * scale);
+		int pw = Math.round((x + w) * scale) - px;
+		int ph = Math.round((y + h) * scale) - py;
+		int t = Math.max(1, Math.round(thickness * scale));
+		if (pw <= t * 2 || ph <= t * 2) {
+			rounded(g, x, y, w, h, radius, color);
+			return;
+		}
+		float r = Math.min(radius * scale, Math.min(pw, ph) / 2f);
+		float innerR = Math.max(0, r - t);
+		Matrix3x2fStack pose = g.pose();
+		pose.pushMatrix();
+		pose.scale(1f / scale, 1f / scale);
+		int rows = Math.max(t, (int) Math.ceil(r));
+		// Straight sides between the corner regions.
+		if (ph - rows * 2 > 0) {
+			g.fill(px, py + rows, px + t, py + ph - rows, color);
+			g.fill(px + pw - t, py + rows, px + pw, py + ph - rows, color);
+		}
+		for (int row = 0; row < rows; row++) {
+			float outerInset = r >= 1 && row < Math.ceil(r) ? cornerInset(r, row) : 0;
+			int outerSolid = (int) Math.ceil(outerInset);
+			float coverage = outerSolid - outerInset;
+			int innerSolid;
+			if (row < t) {
+				innerSolid = -1;
+			} else {
+				int innerRow = row - t;
+				float innerInset = innerR >= 1 && innerRow < Math.ceil(innerR) ? cornerInset(innerR, innerRow) : 0;
+				innerSolid = t + (int) Math.floor(innerInset);
+			}
+			for (int y2 : new int[] {py + row, py + ph - 1 - row}) {
+				if (innerSolid < 0) {
+					drawSpan(g, px, pw, outerSolid, coverage, y2, color);
+				} else {
+					int left = Math.max(outerSolid, 0);
+					if (innerSolid > left) {
+						g.fill(px + left, y2, px + innerSolid, y2 + 1, color);
+						g.fill(px + pw - innerSolid, y2, px + pw - left, y2 + 1, color);
+					}
+					if (coverage > 0.02f && outerSolid > 0) {
+						int aa = Colors.fade(color, coverage);
+						g.fill(px + outerSolid - 1, y2, px + outerSolid, y2 + 1, aa);
+						g.fill(px + pw - outerSolid, y2, px + pw - outerSolid + 1, y2 + 1, aa);
+					}
+				}
+				if (ph - 1 - row == row) {
+					break;
+				}
+			}
+		}
+		pose.popMatrix();
+	}
+
+	/** Horizontal distance from the rectangle edge to the circle edge for a corner row. */
+	private static float cornerInset(float r, int row) {
+		float dy = r - (row + 0.5f);
+		return r - (float) Math.sqrt(Math.max(0, r * r - dy * dy));
+	}
+
+	private static void drawSpan(GuiGraphics g, int px, int pw, int solid, float coverage, int y, int color) {
+		if (pw - solid * 2 > 0) {
+			g.fill(px + solid, y, px + pw - solid, y + 1, color);
+		}
+		if (coverage > 0.02f && solid > 0) {
+			int aa = Colors.fade(color, coverage);
+			g.fill(px + solid - 1, y, px + solid, y + 1, aa);
+			g.fill(px + pw - solid, y, px + pw - solid + 1, y + 1, aa);
+		}
+	}
+
+	private static float guiScale() {
+		return Math.max(1, Minecraft.getInstance().getWindow().getGuiScale());
 	}
 
 	public static void text(GuiGraphics g, Font font, String text, int x, int y, int color) {

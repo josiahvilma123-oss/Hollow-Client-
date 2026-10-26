@@ -77,10 +77,10 @@ final class ListRow extends Row {
 				cy += CHIP_HEIGHT + GAP;
 			}
 			boolean hovered = over(mouseX, mouseY, cx, cy, w, CHIP_HEIGHT);
-			Draw2D.panel(g, cx, cy, w, CHIP_HEIGHT, ui.c(hovered ? Theme.CARD_HOVER : Theme.CARD));
-			Draw2D.border(g, cx, cy, w, CHIP_HEIGHT, ui.c(hovered ? ui.accent : Theme.BORDER));
-			Draw2D.text(g, ui.font, entry, cx + 4, cy + 2, ui.c(Theme.TEXT));
-			Draw2D.text(g, ui.font, "×", cx + w - 9, cy + 2, ui.c(hovered ? Theme.DANGER : Theme.TEXT_FAINT));
+			Draw2D.rounded(g, cx, cy, w, CHIP_HEIGHT, CHIP_HEIGHT / 2f, ui.c(hovered ? Theme.CARD_HOVER : Theme.CARD));
+			Draw2D.roundedBorder(g, cx, cy, w, CHIP_HEIGHT, CHIP_HEIGHT / 2f, 1, ui.c(hovered ? ui.accent : Theme.BORDER));
+			Draw2D.text(g, ui.font, entry, cx + 5, cy + 2, ui.c(Theme.TEXT));
+			Draw2D.text(g, ui.font, "×", cx + w - 10, cy + 2, ui.c(hovered ? Theme.DANGER : Theme.TEXT_FAINT));
 			cx += w + GAP;
 		}
 		int inputY = top + chipsHeight(ui) + 6;

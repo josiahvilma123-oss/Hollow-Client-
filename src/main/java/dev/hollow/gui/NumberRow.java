@@ -40,15 +40,15 @@ final class NumberRow extends Row {
 		shown = ui.approach(shown, setting.fraction(), dragging ? 0.01 : 0.05);
 		int bx = barX();
 		int by = y + 8;
-		g.fill(bx, by, bx + BAR_WIDTH, by + 2, ui.c(Theme.OFF));
-		int filled = (int) Math.round(shown * BAR_WIDTH);
-		g.fill(bx, by, bx + filled, by + 2, ui.c(ui.accent));
-		int knob = bx + filled;
+		Draw2D.rounded(g, bx, by - 0.5f, BAR_WIDTH, 3, 1.5f, ui.c(Theme.OFF));
+		float filled = (float) (shown * BAR_WIDTH);
+		Draw2D.rounded(g, bx, by - 0.5f, Math.max(3, filled), 3, 1.5f, ui.c(ui.accent));
+		float knob = bx + filled;
 		boolean active = dragging || hover > 0.5;
 		if (active) {
-			Draw2D.glow(g, knob - 3, by - 3, 6, 8, ui.c(Colors.withAlpha(ui.accent, 150)), 3, 1f);
+			Draw2D.glow(g, knob - 3.5f, by - 2.5f, 7, 7, 3.5f, ui.c(Colors.withAlpha(ui.accent, 150)), 3, 1f);
 		}
-		Draw2D.panel(g, knob - 2, by - 3, 5, 8, ui.c(active ? 0xFFFFFFFF : 0xFFD8D0E4));
+		Draw2D.circle(g, knob, by + 1, 3.5f, ui.c(active ? 0xFFFFFFFF : 0xFFD8D0E4));
 		Draw2D.text(g, ui.font, value, bx - valueWidth - 6, y + 5, ui.c(active ? ui.accentLight : Theme.TEXT_DIM));
 	}
 

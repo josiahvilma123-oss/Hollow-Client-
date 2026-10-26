@@ -45,14 +45,19 @@ Install: build the jar (see below) or take `build/libs/hollow-<version>.jar`, th
 
 ## Using the menu
 
-- Click a module on the left to open its page. **Right-click** it to toggle the module.
-- Type anywhere to search. Matching counts appear next to each module. `Ctrl+F` focuses the search box and `Esc` clears it.
+The menu is a click GUI: floating, rounded category windows over the game, in the style of Meteor.
+
+- **Left-click** a module to toggle it. **Right-click** it to open its settings window. Always-on modules open their settings on any click.
+- **Drag** a window's header to move it. Click or right-click a header to collapse it. Positions are remembered; *Interface → Reset Window Layout* restores them.
+- Hovering a module shows its description.
+- The settings window can be dragged by its title bar. It has an on/off switch, a close button and a live preview at the top.
+- Type anywhere to search. With no settings window open, the category windows filter to matching modules and show match counts. With one open, its settings are filtered instead. `Ctrl+F` focuses the search box and `Esc` clears it.
 - Sliders: drag, **right-click to reset**, or `Shift` + scroll for single steps.
 - Enum pickers: left-click for next, right-click for previous.
 - Colors: click the swatch for an HSV picker with alpha and hex entry. Right-click the swatch to reset.
 - Keybinds: click, then press a key. `Backspace` unbinds.
 - Section headers collapse. Block Finder's categories start collapsed.
-- `↑`/`↓` switch modules. `Esc` or Right Shift closes the menu.
+- `Esc` closes the settings window first, then the menu. Right Shift also closes the menu.
 
 Settings save automatically to `config/hollow/hollow.json`, debounced and written atomically. A damaged file is moved to `hollow.json.broken` and defaults are restored.
 

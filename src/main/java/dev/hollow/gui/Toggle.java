@@ -20,11 +20,12 @@ final class Toggle {
 		float t = (float) position;
 		int track = Colors.lerp(Theme.OFF, ui.accent, t);
 		if (t > 0.05) {
-			Draw2D.glow(g, x, y, WIDTH, HEIGHT, ui.c(Colors.withAlpha(ui.accent, (int) (120 * t))), 3, 1f);
+			Draw2D.glow(g, x, y, WIDTH, HEIGHT, HEIGHT / 2f, ui.c(Colors.withAlpha(ui.accent, (int) (120 * t))), 3, 1f);
 		}
-		Draw2D.panel(g, x, y, WIDTH, HEIGHT, ui.c(track));
-		int knobX = x + 1 + Math.round(t * (WIDTH - HEIGHT));
+		Draw2D.rounded(g, x, y, WIDTH, HEIGHT, HEIGHT / 2f, ui.c(track));
+		float knobRadius = HEIGHT / 2f - 1.5f;
+		float knobX = x + HEIGHT / 2f + t * (WIDTH - HEIGHT);
 		int knobColor = Colors.lerp(0xFFB8B0C4, 0xFFFFFFFF, (float) Math.max(t, hover * 0.5));
-		Draw2D.panel(g, knobX, y + 1, HEIGHT - 2, HEIGHT - 2, ui.c(knobColor));
+		Draw2D.circle(g, knobX, y + HEIGHT / 2f, knobRadius, ui.c(knobColor));
 	}
 }

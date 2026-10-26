@@ -6,66 +6,52 @@ import dev.hollow.core.anim.Easing;
 import dev.hollow.core.anim.Transition;
 import dev.hollow.core.module.Category;
 import dev.hollow.core.module.Module;
-import dev.hollow.core.setting.ActionSetting;
-import dev.hollow.core.setting.BoolSetting;
-import dev.hollow.core.setting.ColorSetting;
-import dev.hollow.core.setting.EnumSetting;
-import dev.hollow.core.setting.KeySetting;
-import dev.hollow.core.setting.NumberSetting;
-import dev.hollow.core.setting.Setting;
-import dev.hollow.core.setting.StringListSetting;
 import dev.hollow.core.util.Colors;
 import dev.hollow.modules.InterfaceModule;
 import dev.hollow.modules.MotionBlurModule;
 import dev.hollow.render.Draw2D;
 import dev.hollow.render.Theme;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import net.fabricmc.loader.api.FabricLoader;
+import java.util.Locale;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
-import org.joml.Matrix3x2fStack;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.FormattedCharSequence;
 import org.lwjgl.glfw.GLFW;
 
 /**
- * The Hollow module browser: categories and modules on the left, a searchable settings page
- * with a live preview on the right.
+ * Hollow's click GUI: draggable, collapsible category windows (left-click a module to toggle
+ * it, right-click for its settings), a floating settings window, and a search bar.
  */
 public final class HollowScreen extends Screen {
-	private static final int SIDEBAR_WIDTH = 138;
-	private static final int HEADER_HEIGHT = 30;
-	private static final int PAGE_HEADER_HEIGHT = 54;
-	private static final int ENTRY_HEIGHT = 18;
-	private static String lastModuleId = "motion_blur";
+	private static final String SETTINGS_WINDOW_ID = "settings";
+	private static final int BAR_HEIGHT = 22;
+	private static final long TOOLTIP_DELAY_MS = 350;
 
 	private final Screen parent;
 	private final UiContext ui = new UiContext();
-	private final TextInput search = new TextInput("Search settings…", 40);
+	private final TextInput search = new TextInput("Search modules & settings…", 40);
 	private final Transition open = new Transition(0.2, false);
-	private final Transition page = new Transition(0.2, true);
-	private final Map<Module, Toggle> moduleToggles = new HashMap<>();
-	private final Map<Module, Double> entryHover = new HashMap<>();
-	private Module selected;
-	private Module previous;
-	private List<Row> rows = List.of();
+	private final List<CategoryWindow> windows = new ArrayList<>();
+	private final List<ModuleWindow> closingWindows = new ArrayList<>();
+	private ModuleWindow moduleWindow;
+	private Module pendingOpen;
 	private Row activeRow;
-	private double scroll;
-	private double scrollTarget;
-	private double selectionY = -1;
+	private Object dragTarget;
+	private double dragOffsetX;
+	private double dragOffsetY;
+	private double dragStartX;
+	private double dragStartY;
+	private boolean dragMoved;
+	private Module tooltipModule;
+	private long tooltipSince;
 	private long lastFrame = -1;
 	private boolean closing;
-
-	// Layout, recomputed every frame.
-	private int winX;
-	private int winY;
-	private int winW;
-	private int winH;
 
 	public HollowScreen(Screen parent) {
 		super(Component.literal("Hollow"));
@@ -74,9 +60,28 @@ public final class HollowScreen extends Screen {
 
 	@Override
 	protected void init() {
-		if (selected == null) {
-			Module initial = Hollow.modules().byId(lastModuleId).orElse(Hollow.modules().all().get(0));
-			select(initial, false);
+		InterfaceModule settings = Hollow.module(InterfaceModule.class);
+		if (windows.isEmpty()) {
+			int index = 0;
+			for (Category category : Category.values()) {
+				if (Hollow.modules().byCategory(category).isEmpty()) {
+					continue;
+				}
+				String id = category.name().toLowerCase(Locale.ROOT);
+				int[] saved = settings.windowPosition(id);
+				float x = saved != null ? saved[0] : 16 + index * (CategoryWindow.WIDTH + 14);
+				float y = saved != null ? saved[1] : BAR_HEIGHT + 24;
+				windows.add(new CategoryWindow(category, x, y, saved != null && saved[2] == 1));
+				index++;
+			}
+		}
+		for (CategoryWindow window : windows) {
+			window.x = clamp(window.x, 0, width - CategoryWindow.WIDTH);
+			window.y = clamp(window.y, 0, height - CategoryWindow.HEADER);
+		}
+		if (moduleWindow != null) {
+			moduleWindow.x = clamp(moduleWindow.x, 0, width - moduleWindow.width);
+			moduleWindow.y = clamp(moduleWindow.y, 0, height - ModuleWindow.TITLE);
 		}
 		open.duration(guiSeconds());
 		open.open();
@@ -87,165 +92,56 @@ public final class HollowScreen extends Screen {
 		return false;
 	}
 
+	private static float clamp(float value, float min, float max) {
+		return Math.max(min, Math.min(Math.max(min, max), value));
+	}
+
 	private double guiSeconds() {
 		return Hollow.module(MotionBlurModule.class).guiDuration.get() / 1000.0;
-	}
-
-	private void select(Module module, boolean animate) {
-		if (module == selected) {
-			return;
-		}
-		previous = selected;
-		selected = module;
-		lastModuleId = module.id();
-		rows = buildRows(module);
-		activeRow = null;
-		scroll = 0;
-		scrollTarget = 0;
-		page.duration(guiSeconds());
-		if (animate) {
-			page.snap(false);
-			page.open();
-		} else {
-			page.snap(true);
-		}
-	}
-
-	private static List<Row> buildRows(Module module) {
-		List<Row> result = new ArrayList<>();
-		PreviewRow preview = PreviewRow.forModule(module);
-		if (preview != null) {
-			result.add(preview);
-		}
-		String group = null;
-		boolean manyGroups = module.settings().stream().map(Setting::group).distinct().count() > 8;
-		for (Setting<?> setting : module.settings()) {
-			if (!setting.group().equals(group)) {
-				group = setting.group();
-				if (!group.isEmpty()) {
-					// Long pages (Block Finder categories) start with per-category sections collapsed.
-					boolean collapse = manyGroups && group.contains("·");
-					result.add(new HeaderRow(module.id(), group, collapse));
-				}
-			}
-			Row row = rowFor(setting);
-			if (row != null) {
-				result.add(row);
-			}
-		}
-		return result;
-	}
-
-	private static Row rowFor(Setting<?> setting) {
-		if (setting instanceof BoolSetting bool) {
-			return new BoolRow(bool);
-		}
-		if (setting instanceof NumberSetting number) {
-			return new NumberRow(number);
-		}
-		if (setting instanceof ColorSetting color) {
-			return new ColorRow(color);
-		}
-		if (setting instanceof EnumSetting<?> enumSetting) {
-			return new EnumRow(enumSetting);
-		}
-		if (setting instanceof KeySetting key) {
-			return new KeyRow(key);
-		}
-		if (setting instanceof StringListSetting list) {
-			return new ListRow(list);
-		}
-		if (setting instanceof ActionSetting action) {
-			return new ActionRow(action);
-		}
-		return null;
-	}
-
-	// ---------------------------------------------------------------- layout helpers
-
-	private void layout() {
-		winW = Math.min(width - 20, 600);
-		winH = Math.min(height - 20, 360);
-		winX = (width - winW) / 2;
-		winY = (height - winH) / 2;
-	}
-
-	private int contentX() {
-		return winX + SIDEBAR_WIDTH;
-	}
-
-	private int contentWidth() {
-		return winW - SIDEBAR_WIDTH;
-	}
-
-	private int rowsTop() {
-		return winY + HEADER_HEIGHT + PAGE_HEADER_HEIGHT;
-	}
-
-	private int rowsBottom() {
-		return winY + winH - 6;
-	}
-
-	private int searchX() {
-		return winX + winW - 8 - searchWidth();
-	}
-
-	private int searchWidth() {
-		return Math.min(150, winW / 3);
 	}
 
 	private String query() {
 		return search.text().trim();
 	}
 
-	/** Rows that pass the search filter, collapse state and visibility rules, in order. */
-	private List<Row> visibleRows() {
-		String query = query();
-		boolean searching = !query.isEmpty();
-		boolean moduleMatches = searching && selected.name().toLowerCase().contains(query.toLowerCase());
-		List<Row> result = new ArrayList<>();
-		HeaderRow header = null;
-		boolean headerAdded = false;
-		for (Row row : rows) {
-			if (row instanceof PreviewRow) {
-				if (!searching) {
-					result.add(row);
-				}
-				continue;
-			}
-			if (row instanceof HeaderRow h) {
-				header = h;
-				headerAdded = false;
-				continue;
-			}
-			Setting<?> setting = row.setting();
-			boolean matches = !searching || moduleMatches || setting.matches(query) || header != null && header.title.toLowerCase().contains(query.toLowerCase());
-			if (!setting.isVisible() || !matches) {
-				continue;
-			}
-			if (header != null && !headerAdded) {
-				result.add(header);
-				headerAdded = true;
-			}
-			if (header == null || searching || !header.collapsed()) {
-				result.add(row);
-			}
+	/** Opens (or switches) the settings window to a module. */
+	void openSettings(Module module) {
+		if (moduleWindow != null && moduleWindow.module == module) {
+			return;
 		}
-		return result;
+		float w = Math.min(380, width - 32);
+		float h = Math.min(height - BAR_HEIGHT - 32, 360);
+		float x;
+		float y;
+		if (moduleWindow != null) {
+			x = moduleWindow.x;
+			y = moduleWindow.y;
+			moduleWindow.close(guiSeconds() * 0.6);
+			closingWindows.add(moduleWindow);
+		} else {
+			int[] saved = Hollow.module(InterfaceModule.class).windowPosition(SETTINGS_WINDOW_ID);
+			x = saved != null ? saved[0] : (width - w) / 2f + 70;
+			y = saved != null ? saved[1] : BAR_HEIGHT + 22;
+		}
+		x = clamp(x, 0, width - w);
+		y = clamp(y, 0, height - h);
+		moduleWindow = new ModuleWindow(module, x, y, w, h, guiSeconds());
+		activeRow = null;
 	}
 
-	private int matchCount(Module module) {
-		String query = query();
-		if (query.isEmpty()) {
-			return 0;
+	private void closeSettings() {
+		if (moduleWindow != null) {
+			moduleWindow.close(guiSeconds() * 0.7);
+			closingWindows.add(moduleWindow);
+			moduleWindow = null;
+			activeRow = null;
 		}
-		int count = 0;
-		for (Setting<?> setting : module.settings()) {
-			if (setting.matches(query)) {
-				count++;
-			}
-		}
-		return count;
+	}
+
+	/** Opens the menu with a module's settings already showing (used by tests and deep links). */
+	public HollowScreen openOn(Class<? extends Module> type) {
+		pendingOpen = Hollow.module(type);
+		return this;
 	}
 
 	// ---------------------------------------------------------------- rendering
@@ -254,19 +150,21 @@ public final class HollowScreen extends Screen {
 	public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
 		float dim = Hollow.module(InterfaceModule.class).backdrop.getFloat();
 		float e = (float) open.eased(Easing.CUBIC_OUT);
-		int top = Colors.withAlpha(0xFF050308, Math.round(255 * dim * e));
-		int bottom = Colors.withAlpha(0xFF12081C, Math.round(255 * Math.min(1, dim * 1.15f) * e));
+		int top = Colors.withAlpha(0xFF050308, Math.round(255 * dim * 0.85f * e));
+		int bottom = Colors.withAlpha(0xFF14081F, Math.round(255 * Math.min(1, dim * 1.1f) * e));
 		g.fillGradient(0, 0, width, height, top, bottom);
 	}
 
 	@Override
 	public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+		if (pendingOpen != null) {
+			openSettings(pendingOpen);
+			pendingOpen = null;
+		}
 		long now = System.nanoTime();
 		double delta = lastFrame < 0 ? 0 : Math.min(0.1, (now - lastFrame) / 1e9);
 		lastFrame = now;
 		open.update(delta);
-		page.update(delta);
-		layout();
 		InterfaceModule settings = Hollow.module(InterfaceModule.class);
 		ui.font = font;
 		ui.delta = delta;
@@ -274,210 +172,133 @@ public final class HollowScreen extends Screen {
 		ui.descriptions = settings.descriptions.get();
 		ui.accent = Theme.accent();
 		ui.accentLight = Theme.accentLight();
-
 		double e = open.eased(Easing.CUBIC_OUT);
-		ui.alpha = (float) e;
 		double trail = Hollow.module(MotionBlurModule.class).guiTrail();
-		float offsetY = (float) ((1 - e) * 14);
-		float scale = (float) (0.965 + 0.035 * e);
-
-		Matrix3x2fStack pose = g.pose();
-		// GUI motion blur: faint afterimages of the window frame trailing its entrance.
-		if (trail > 0 && e < 0.995) {
-			for (int i = 3; i >= 1; i--) {
-				float ghostAlpha = (float) (trail * 0.22 * (1 - e) / i);
-				int ghostY = Math.round(offsetY * (1 + i * 0.6f));
-				Draw2D.panel(g, winX, winY + ghostY, winW, winH, Colors.fade(Theme.BACKGROUND, ghostAlpha));
-				Draw2D.border(g, winX, winY + ghostY, winW, winH, Colors.fade(ui.accent, ghostAlpha));
-			}
-		}
-		pose.pushMatrix();
-		pose.translate(width / 2f, height / 2f + offsetY);
-		pose.scale(scale, scale);
-		pose.translate(-width / 2f, -height / 2f);
-
-		float panelOpacity = settings.panelOpacity.getFloat();
-		Draw2D.glow(g, winX, winY, winW, winH, ui.c(Colors.withAlpha(ui.accent, 150)), 8, 0.8f);
-		Draw2D.panel(g, winX, winY, winW, winH, ui.c(Colors.fade(Theme.BACKGROUND, panelOpacity)));
-		Draw2D.border(g, winX, winY, winW, winH, ui.c(Theme.BORDER));
-
-		renderHeader(g, mouseX, mouseY);
-		renderSidebar(g, mouseX, mouseY);
-		renderPage(g, mouseX, mouseY, trail);
-		pose.popMatrix();
-	}
-
-	private void renderHeader(GuiGraphics g, int mouseX, int mouseY) {
-		g.fill(winX + 1, winY + HEADER_HEIGHT - 1, winX + winW - 1, winY + HEADER_HEIGHT, ui.c(Theme.BORDER));
-		Draw2D.scythe(g, winX + 10, winY + 7, 16, ui.c(ui.accentLight));
-		int textX = winX + 32;
-		int wordmark = Draw2D.spaced(g, font, "HOLLOW", textX, winY + 11, ui.c(Theme.TEXT), 3);
-		Draw2D.text(g, font, "·  MODULE BROWSER", textX + wordmark + 8, winY + 11, ui.c(Theme.TEXT_FAINT));
-		search.render(g, ui, searchX(), winY + 8, searchWidth(), 15);
-		if (search.text().isEmpty() && !search.focused()) {
-			Draw2D.text(g, font, "⌕", searchX() + searchWidth() - 11, winY + 11, ui.c(Theme.TEXT_FAINT));
-		}
-	}
-
-	private void renderSidebar(GuiGraphics g, int mouseX, int mouseY) {
-		int sx = winX + 1;
-		int top = winY + HEADER_HEIGHT;
-		g.fill(sx, top, winX + SIDEBAR_WIDTH, winY + winH - 1, ui.c(Colors.withAlpha(Theme.PANEL, 200)));
-		g.fill(winX + SIDEBAR_WIDTH - 1, top, winX + SIDEBAR_WIDTH, winY + winH - 1, ui.c(Theme.BORDER));
-		int y = top + 8;
 		String query = query();
-		for (Category category : Category.values()) {
-			List<Module> modules = Hollow.modules().byCategory(category);
-			if (modules.isEmpty()) {
-				continue;
+		// While a settings window is open, search filters its settings instead of the module list.
+		String windowQuery = moduleWindow != null ? "" : query;
+
+		renderTopBar(g, (float) e);
+
+		// Category windows fade and drop in one after another.
+		boolean blocked = moduleWindow != null && moduleWindow.contains(mouseX, mouseY);
+		for (int i = 0; i < windows.size(); i++) {
+			CategoryWindow window = windows.get(i);
+			double stagger = Math.max(0, Math.min(1, e * 1.4 - i * 0.12));
+			ui.alpha = (float) stagger;
+			float drop = (float) ((1 - stagger) * 10);
+			if (trail > 0 && stagger < 0.98) {
+				Draw2D.rounded(g, window.x, window.y - drop * 2, CategoryWindow.WIDTH, window.height(windowQuery), 6,
+					Colors.fade(Theme.PANEL, (float) (trail * 0.3 * (1 - stagger))));
 			}
-			Draw2D.spaced(g, font, category.displayName().toUpperCase(), sx + 10, y + 2, ui.c(Theme.TEXT_FAINT), 1);
-			y += 14;
-			for (Module module : modules) {
-				boolean isSelected = module == selected;
-				if (isSelected) {
-					selectionY = selectionY < 0 ? y : ui.approach(selectionY, y, 0.05);
-					int sy = (int) Math.round(selectionY);
-					Draw2D.panel(g, sx + 5, sy, SIDEBAR_WIDTH - 12, ENTRY_HEIGHT - 2, ui.c(Theme.CARD_HOVER));
-					g.fill(sx + 5, sy + 3, sx + 7, sy + ENTRY_HEIGHT - 5, ui.c(ui.accent));
-					Draw2D.glow(g, sx + 5, sy + 3, 2, ENTRY_HEIGHT - 8, ui.c(ui.accent), 3, 0.9f);
-				}
-				boolean hovered = mouseX >= sx + 5 && mouseX < sx + SIDEBAR_WIDTH - 7 && mouseY >= y && mouseY < y + ENTRY_HEIGHT - 2;
-				double h = ui.approach(entryHover.getOrDefault(module, 0.0), hovered ? 1 : 0, 0.06);
-				entryHover.put(module, h);
-				if (!isSelected && h > 0.02) {
-					Draw2D.panel(g, sx + 5, y, SIDEBAR_WIDTH - 12, ENTRY_HEIGHT - 2, ui.c(Colors.withAlpha(Theme.CARD, (int) (h * 255))));
-				}
-				int matches = matchCount(module);
-				boolean dimmed = !query.isEmpty() && matches == 0 && !module.matches(query);
-				int nameColor = dimmed ? Theme.TEXT_FAINT : isSelected ? Theme.TEXT : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, (float) h);
-				Draw2D.text(g, font, Draw2D.ellipsize(font, module.name(), SIDEBAR_WIDTH - 44), sx + 13, y + 4, ui.c(nameColor));
-				int dotX = sx + SIDEBAR_WIDTH - 18;
-				// Status dot only for modules with an on/off state (or ones that failed to load).
-				if (module.isToggleable() || !module.isAvailable()) {
-					int dot = !module.isAvailable() ? Theme.DANGER : module.isEnabled() ? ui.accent : Theme.OFF;
-					if (module.isEnabled()) {
-						Draw2D.glow(g, dotX, y + 5, 4, 4, ui.c(Colors.withAlpha(ui.accent, 170)), 2, 1f);
-					}
-					Draw2D.panel(g, dotX, y + 5, 4, 4, ui.c(dot));
-				}
-				if (matches > 0) {
-					String badge = Integer.toString(matches);
-					Draw2D.text(g, font, badge, dotX - 4 - font.width(badge), y + 4, ui.c(ui.accentLight));
-				}
-				y += ENTRY_HEIGHT;
-			}
-			y += 6;
+			window.y -= drop;
+			window.render(g, ui, blocked ? -1000 : mouseX, blocked ? -1000 : mouseY, windowQuery,
+				moduleWindow == null ? null : moduleWindow.module, i == windows.size() - 1);
+			window.y += drop;
 		}
-		String version = FabricLoader.getInstance().getModContainer(Hollow.MOD_ID)
-			.map(c -> c.getMetadata().getVersion().getFriendlyString()).orElse("dev");
-		String key = HollowClient.openMenuKey() == null ? "" : " · " + HollowClient.openMenuKey().getTranslatedKeyMessage().getString();
-		Draw2D.text(g, font, Draw2D.ellipsize(font, "v" + version + key, SIDEBAR_WIDTH - 16), sx + 10, winY + winH - 14, ui.c(Theme.TEXT_FAINT));
+		ui.alpha = (float) e;
+
+		closingWindows.removeIf(ModuleWindow::closed);
+		for (ModuleWindow closingWindow : closingWindows) {
+			closingWindow.open.update(delta);
+			closingWindow.render(g, ui, -1000, -1000, "", trail);
+		}
+		if (moduleWindow != null) {
+			moduleWindow.open.update(delta);
+			moduleWindow.render(g, ui, mouseX, mouseY, query, trail);
+		}
+		renderTooltip(g, mouseX, mouseY, windowQuery);
+		renderHint(g);
+		ui.alpha = 1f;
 	}
 
-	private void renderPage(GuiGraphics g, int mouseX, int mouseY, double trail) {
-		double pe = page.eased(Easing.CUBIC_OUT);
-		float savedAlpha = ui.alpha;
-		int cx = contentX();
-		int cw = contentWidth();
-		int headerTop = winY + HEADER_HEIGHT;
-
-		// Previous page title slides out with a short trail while the new one slides in.
-		if (previous != null && pe < 1) {
-			ui.alpha = savedAlpha * (float) (1 - pe);
-			int slideOut = (int) Math.round(-18 * pe);
-			drawPageTitle(g, previous, cx + 14 + slideOut, headerTop + 8, mouseX, mouseY, false);
-			if (trail > 0) {
-				ui.alpha = savedAlpha * (float) ((1 - pe) * trail * 0.35);
-				drawPageTitle(g, previous, cx + 14 + slideOut + 6, headerTop + 8, mouseX, mouseY, false);
-			}
-		}
-		ui.alpha = savedAlpha * (float) pe;
-		int slideIn = (int) Math.round(16 * (1 - pe));
-		if (trail > 0 && pe < 0.98) {
-			float base = ui.alpha;
-			ui.alpha = base * (float) (trail * 0.3);
-			drawPageTitle(g, selected, cx + 14 + slideIn * 2, headerTop + 8, mouseX, mouseY, false);
-			ui.alpha = base;
-		}
-		drawPageTitle(g, selected, cx + 14 + slideIn, headerTop + 8, mouseX, mouseY, true);
-		g.fill(cx + 10, rowsTop() - 4, cx + cw - 10, rowsTop() - 3, ui.c(Theme.BORDER_SOFT));
-
-		// Rows.
-		List<Row> visible = visibleRows();
-		int viewportTop = rowsTop();
-		int viewportBottom = rowsBottom();
-		int contentHeight = 0;
-		for (Row row : visible) {
-			row.ui = ui;
-			contentHeight += row.height(ui) + 2;
-		}
-		double maxScroll = Math.max(0, contentHeight - (viewportBottom - viewportTop) + 8);
-		scrollTarget = Math.max(0, Math.min(maxScroll, scrollTarget));
-		scroll = ui.approach(scroll, scrollTarget, 0.05);
-		g.enableScissor(cx + 1, viewportTop, cx + cw - 1, viewportBottom);
-		int y = viewportTop + 2 - (int) Math.round(scroll);
-		for (Row row : visible) {
-			row.x = cx + 6 + slideIn;
-			row.y = y;
-			row.width = cw - 18;
-			int h = row.height(ui);
-			if (y + h >= viewportTop && y <= viewportBottom) {
-				boolean inside = mouseY >= viewportTop && mouseY < viewportBottom;
-				row.render(g, ui, inside ? mouseX : -1000, inside ? mouseY : -1000);
-			}
-			y += h + 2;
-		}
-		if (visible.isEmpty()) {
-			Draw2D.centered(g, font, "No settings match \"" + query() + "\"", cx + cw / 2, viewportTop + 20, ui.c(Theme.TEXT_DIM));
-		}
-		// Soft fade at the viewport edges.
-		g.fillGradient(cx + 1, viewportTop, cx + cw - 1, viewportTop + 6, ui.c(Theme.BACKGROUND), ui.c(Theme.BACKGROUND & 0x00FFFFFF));
-		g.fillGradient(cx + 1, viewportBottom - 6, cx + cw - 1, viewportBottom, ui.c(Theme.BACKGROUND & 0x00FFFFFF), ui.c(Theme.BACKGROUND));
-		g.disableScissor();
-		if (maxScroll > 0) {
-			int trackH = viewportBottom - viewportTop;
-			int barH = Math.max(16, (int) (trackH * trackH / (double) (contentHeight + trackH)));
-			int barY = viewportTop + (int) ((trackH - barH) * (scroll / maxScroll));
-			g.fill(cx + cw - 5, barY, cx + cw - 3, barY + barH, ui.c(Colors.withAlpha(ui.accent, 150)));
-		}
-		ui.alpha = savedAlpha;
+	private float barWidth() {
+		return Math.min(width - 20, 300);
 	}
 
-	private void drawPageTitle(GuiGraphics g, Module module, int x, int y, int mouseX, int mouseY, boolean interactive) {
-		Matrix3x2fStack pose = g.pose();
-		pose.pushMatrix();
-		pose.translate(x, y);
-		pose.scale(1.5f, 1.5f);
-		Draw2D.text(g, font, module.name(), 0, 0, ui.c(Theme.TEXT));
-		pose.popMatrix();
-		int cw = contentWidth();
-		String subtitle = module.unavailableReason().map(r -> "Unavailable: " + r).orElse(module.description());
-		int subtitleColor = module.isAvailable() ? Theme.TEXT_DIM : Theme.DANGER;
-		int lineY = y + 19;
-		List<net.minecraft.util.FormattedCharSequence> lines = font.split(net.minecraft.network.chat.FormattedText.of(subtitle), cw - 90);
-		for (int i = 0; i < Math.min(2, lines.size()); i++) {
-			g.drawString(font, lines.get(i), x, lineY, ui.c(subtitleColor), false);
-			lineY += 10;
+	private float barX() {
+		return (width - barWidth()) / 2f;
+	}
+
+	private int searchX() {
+		return (int) (barX() + 92);
+	}
+
+	private int searchWidth() {
+		return (int) (barWidth() - 98);
+	}
+
+	private void renderTopBar(GuiGraphics g, float alpha) {
+		ui.alpha = alpha;
+		float bx = barX();
+		float by = 8 - (1 - alpha) * 8;
+		float bw = barWidth();
+		Draw2D.glow(g, bx, by, bw, BAR_HEIGHT, BAR_HEIGHT / 2f, ui.c(Colors.withAlpha(ui.accent, 110)), 5, 0.8f);
+		Draw2D.rounded(g, bx, by, bw, BAR_HEIGHT, BAR_HEIGHT / 2f, ui.c(Colors.withAlpha(Theme.PANEL, 240)));
+		Draw2D.roundedBorder(g, bx, by, bw, BAR_HEIGHT, BAR_HEIGHT / 2f, 1, ui.c(Colors.withAlpha(Theme.BORDER, 230)));
+		Draw2D.scythe(g, bx + 9, by + 4, 14, ui.c(ui.accentLight));
+		Draw2D.spaced(g, font, "HOLLOW", (int) bx + 28, (int) by + 7, ui.c(Theme.TEXT), 2);
+		search.render(g, ui, searchX(), (int) by + 4, searchWidth(), 14);
+	}
+
+	private void renderTooltip(GuiGraphics g, int mouseX, int mouseY, String windowQuery) {
+		Module hovered = null;
+		if (dragTarget == null && (moduleWindow == null || !moduleWindow.contains(mouseX, mouseY))) {
+			for (int i = windows.size() - 1; i >= 0; i--) {
+				CategoryWindow window = windows.get(i);
+				if (window.contains(mouseX, mouseY, windowQuery)) {
+					hovered = window.moduleAt(mouseX, mouseY, windowQuery);
+					break;
+				}
+			}
 		}
-		if (module.isToggleable() && interactive) {
-			Toggle toggle = moduleToggles.computeIfAbsent(module, m -> new Toggle(m.isEnabled()));
-			int tx = contentX() + cw - 14 - Toggle.WIDTH;
-			String state = module.isEnabled() ? "ON" : "OFF";
-			Draw2D.text(g, font, state, tx - 6 - font.width(state), y + 4, ui.c(module.isEnabled() ? ui.accentLight : Theme.TEXT_FAINT));
-			toggle.render(g, ui, tx, y + 3, module.isEnabled(), 0);
+		long now = System.currentTimeMillis();
+		if (hovered != tooltipModule) {
+			tooltipModule = hovered;
+			tooltipSince = now;
 		}
+		if (hovered == null || now - tooltipSince < TOOLTIP_DELAY_MS) {
+			return;
+		}
+		float fade = Math.min(1f, (now - tooltipSince - TOOLTIP_DELAY_MS) / 150f);
+		List<FormattedCharSequence> lines = new ArrayList<>(font.split(FormattedText.of(hovered.description()), 170));
+		String hint = hovered.isToggleable() ? "Left-click: toggle · Right-click: settings" : "Click: settings";
+		int w = font.width(hint);
+		for (FormattedCharSequence line : lines) {
+			w = Math.max(w, font.width(line));
+		}
+		w += 12;
+		int h = lines.size() * 10 + 18;
+		int tx = Math.min(mouseX + 10, width - w - 4);
+		int ty = Math.min(mouseY + 10, height - h - 4);
+		float saved = ui.alpha;
+		ui.alpha = fade;
+		Draw2D.rounded(g, tx, ty, w, h, 5, ui.c(0xF00B0910));
+		Draw2D.roundedBorder(g, tx, ty, w, h, 5, 1, ui.c(Colors.withAlpha(ui.accent, 160)));
+		int ly = ty + 5;
+		for (FormattedCharSequence line : lines) {
+			g.drawString(font, line, tx + 6, ly, ui.c(Theme.TEXT), false);
+			ly += 10;
+		}
+		Draw2D.text(g, font, hint, tx + 6, ly + 2, ui.c(Theme.TEXT_FAINT));
+		ui.alpha = saved;
+	}
+
+	private void renderHint(GuiGraphics g) {
+		String key = HollowClient.openMenuKey() == null ? "Right Shift" : HollowClient.openMenuKey().getTranslatedKeyMessage().getString();
+		String hint = "Left-click toggles · Right-click opens settings · Drag headers to move · " + key + " closes";
+		Draw2D.text(g, font, Draw2D.ellipsize(font, hint, width - 16), 8, height - 14, ui.c(Colors.withAlpha(Theme.TEXT_FAINT, 200)));
 	}
 
 	// ---------------------------------------------------------------- input
 
 	private Row focusedRow() {
-		for (Row row : rows) {
-			if (row.capturesKeyboard()) {
-				return row;
-			}
-		}
-		return null;
+		return moduleWindow == null ? null : moduleWindow.focusedRow();
+	}
+
+	private void bringToFront(CategoryWindow window) {
+		windows.remove(window);
+		windows.add(window);
 	}
 
 	@Override
@@ -485,16 +306,16 @@ public final class HollowScreen extends Screen {
 		if (closing) {
 			return true;
 		}
-		layout();
 		double mx = event.x();
 		double my = event.y();
 		int button = event.button();
+		String query = query();
 
 		Row focused = focusedRow();
 		if (focused != null && !focused.contains(mx, my, ui)) {
 			focused.cancelInput();
 		}
-		boolean onSearch = mx >= searchX() && mx < searchX() + searchWidth() && my >= winY + 8 && my < winY + 23;
+		boolean onSearch = mx >= searchX() && mx < searchX() + searchWidth() && my >= 12 && my < 26;
 		search.focus(onSearch);
 		if (onSearch) {
 			if (button == 1) {
@@ -502,57 +323,90 @@ public final class HollowScreen extends Screen {
 			}
 			return true;
 		}
-		if (clickSidebar(mx, my, button)) {
+
+		if (moduleWindow != null && moduleWindow.contains(mx, my)) {
+			if (moduleWindow.overClose(mx, my)) {
+				closeSettings();
+				return true;
+			}
+			if (moduleWindow.overToggle(mx, my)) {
+				moduleWindow.module.toggle();
+				return true;
+			}
+			if (moduleWindow.overTitle(mx, my)) {
+				startDrag(moduleWindow, mx, my, moduleWindow.x, moduleWindow.y);
+				return true;
+			}
+			Row row = moduleWindow.rowAt(mx, my, query, ui);
+			if (row != null) {
+				activeRow = row;
+				return row.mouseClicked(mx, my, button);
+			}
 			return true;
 		}
-		int cw = contentWidth();
-		int tx = contentX() + cw - 14 - Toggle.WIDTH;
-		int headerTop = winY + HEADER_HEIGHT + 8;
-		if (selected.isToggleable() && mx >= tx - 30 && mx < tx + Toggle.WIDTH + 2 && my >= headerTop && my < headerTop + 16) {
-			selected.toggle();
-			return true;
-		}
-		if (my >= rowsTop() && my < rowsBottom()) {
-			for (Row row : visibleRows()) {
-				if (row.contains(mx, my, ui)) {
-					activeRow = row;
-					return row.mouseClicked(mx, my, button);
+
+		String windowQuery = moduleWindow != null ? "" : query;
+		for (int i = windows.size() - 1; i >= 0; i--) {
+			CategoryWindow window = windows.get(i);
+			if (!window.contains(mx, my, windowQuery)) {
+				continue;
+			}
+			bringToFront(window);
+			if (window.overHeader(mx, my)) {
+				if (button == 1) {
+					toggleCollapse(window);
+				} else {
+					startDrag(window, mx, my, window.x, window.y);
+				}
+				return true;
+			}
+			Module module = window.moduleAt(mx, my, windowQuery);
+			if (module != null) {
+				if (button == 0 && module.isToggleable()) {
+					module.toggle();
+				} else if (button == 0 || button == 1) {
+					openSettings(module);
 				}
 			}
+			return true;
 		}
 		return super.mouseClicked(event, doubleClick);
 	}
 
-	private boolean clickSidebar(double mx, double my, int button) {
-		if (mx < winX || mx >= winX + SIDEBAR_WIDTH) {
-			return false;
-		}
-		int y = winY + HEADER_HEIGHT + 8;
-		for (Category category : Category.values()) {
-			List<Module> modules = Hollow.modules().byCategory(category);
-			if (modules.isEmpty()) {
-				continue;
-			}
-			y += 14;
-			for (Module module : modules) {
-				if (my >= y && my < y + ENTRY_HEIGHT - 2) {
-					if (button == 1 && module.isToggleable()) {
-						module.toggle();
-					} else {
-						select(module, true);
-					}
-					return true;
-				}
-				y += ENTRY_HEIGHT;
-			}
-			y += 6;
-		}
-		return true;
+	private void toggleCollapse(CategoryWindow window) {
+		window.collapsed = !window.collapsed;
+		Hollow.module(InterfaceModule.class).saveWindowPosition(window.id(), Math.round(window.x), Math.round(window.y), window.collapsed);
+	}
+
+	private void startDrag(Object target, double mx, double my, float x, float y) {
+		dragTarget = target;
+		dragOffsetX = mx - x;
+		dragOffsetY = my - y;
+		dragStartX = mx;
+		dragStartY = my;
+		dragMoved = false;
 	}
 
 	@Override
 	public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-		if (activeRow != null && activeRow.mouseDragged(event.x(), event.y())) {
+		double mx = event.x();
+		double my = event.y();
+		if (dragTarget != null) {
+			if (Math.abs(mx - dragStartX) + Math.abs(my - dragStartY) > 2) {
+				dragMoved = true;
+			}
+			float nx = (float) (mx - dragOffsetX);
+			float ny = (float) (my - dragOffsetY);
+			if (dragTarget instanceof CategoryWindow window) {
+				window.x = clamp(nx, 0, width - CategoryWindow.WIDTH);
+				window.y = clamp(ny, 0, height - CategoryWindow.HEADER);
+			} else if (dragTarget instanceof ModuleWindow window) {
+				window.x = clamp(nx, 0, width - window.width);
+				window.y = clamp(ny, 0, height - ModuleWindow.TITLE);
+			}
+			return true;
+		}
+		if (activeRow != null && activeRow.mouseDragged(mx, my)) {
 			return true;
 		}
 		return super.mouseDragged(event, dragX, dragY);
@@ -560,6 +414,20 @@ public final class HollowScreen extends Screen {
 
 	@Override
 	public boolean mouseReleased(MouseButtonEvent event) {
+		if (dragTarget != null) {
+			InterfaceModule settings = Hollow.module(InterfaceModule.class);
+			if (dragTarget instanceof CategoryWindow window) {
+				if (dragMoved) {
+					settings.saveWindowPosition(window.id(), Math.round(window.x), Math.round(window.y), window.collapsed);
+				} else {
+					toggleCollapse(window);
+				}
+			} else if (dragTarget instanceof ModuleWindow window && dragMoved) {
+				settings.saveWindowPosition(SETTINGS_WINDOW_ID, Math.round(window.x), Math.round(window.y), false);
+			}
+			dragTarget = null;
+			return true;
+		}
 		if (activeRow != null) {
 			activeRow.mouseReleased();
 			activeRow = null;
@@ -569,24 +437,15 @@ public final class HollowScreen extends Screen {
 
 	@Override
 	public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-		if (mouseX >= contentX() && mouseX < contentX() + contentWidth() && mouseY >= rowsTop() && mouseY < rowsBottom()) {
+		if (moduleWindow != null && moduleWindow.overBody(mouseX, mouseY, ui)) {
 			if (minecraft.hasShiftDown()) {
-				for (Row row : visibleRows()) {
-					if (row instanceof NumberRow number && row.contains(mouseX, mouseY, ui)) {
-						number.nudge(scrollY > 0 ? 1 : -1);
-						return true;
-					}
+				Row row = moduleWindow.rowAt(mouseX, mouseY, query(), ui);
+				if (row instanceof NumberRow number) {
+					number.nudge(scrollY > 0 ? 1 : -1);
+					return true;
 				}
 			}
-			scrollTarget -= scrollY * 28;
-			return true;
-		}
-		if (mouseX >= winX && mouseX < winX + SIDEBAR_WIDTH) {
-			List<Module> all = Hollow.modules().all();
-			int index = all.indexOf(selected) + (scrollY > 0 ? -1 : 1);
-			if (index >= 0 && index < all.size()) {
-				select(all.get(index), true);
-			}
+			moduleWindow.scrollBy(scrollY * 28);
 			return true;
 		}
 		return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -600,7 +459,8 @@ public final class HollowScreen extends Screen {
 				focused.cancelInput();
 				return true;
 			}
-			return focused.keyPressed(event) || true;
+			focused.keyPressed(event);
+			return true;
 		}
 		if (search.focused()) {
 			if (event.isEscape()) {
@@ -615,22 +475,23 @@ public final class HollowScreen extends Screen {
 				search.focus(false);
 				return true;
 			}
-			return search.keyPressed(event) || true;
+			search.keyPressed(event);
+			return true;
 		}
 		if (event.key() == GLFW.GLFW_KEY_F && event.hasControlDown()) {
 			search.focus(true);
 			return true;
 		}
-		if (event.isEscape() || HollowClient.openMenuKey() != null && HollowClient.openMenuKey().matches(event)) {
-			onClose();
+		if (event.isEscape()) {
+			if (moduleWindow != null) {
+				closeSettings();
+			} else {
+				onClose();
+			}
 			return true;
 		}
-		if (event.key() == GLFW.GLFW_KEY_UP || event.key() == GLFW.GLFW_KEY_DOWN) {
-			List<Module> all = Hollow.modules().all();
-			int index = all.indexOf(selected) + (event.key() == GLFW.GLFW_KEY_UP ? -1 : 1);
-			if (index >= 0 && index < all.size()) {
-				select(all.get(index), true);
-			}
+		if (HollowClient.openMenuKey() != null && HollowClient.openMenuKey().matches(event)) {
+			onClose();
 			return true;
 		}
 		return super.keyPressed(event);
@@ -646,7 +507,6 @@ public final class HollowScreen extends Screen {
 			search.focus(true);
 		}
 		if (search.charTyped(event)) {
-			scrollTarget = 0;
 			return true;
 		}
 		return super.charTyped(event);
@@ -667,7 +527,7 @@ public final class HollowScreen extends Screen {
 		closing = true;
 		open.duration(guiSeconds() * 0.8);
 		open.close();
-		lastFrame = -1;
+		closeSettings();
 	}
 
 	@Override
@@ -676,11 +536,4 @@ public final class HollowScreen extends Screen {
 			Hollow.config().save();
 		}
 	}
-
-	/** Exposed for tests and for other screens that want to deep-link into a module page. */
-	public HollowScreen openOn(Class<? extends Module> type) {
-		select(Hollow.module(type), false);
-		return this;
-	}
-
 }

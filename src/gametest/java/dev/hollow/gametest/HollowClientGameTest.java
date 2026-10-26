@@ -84,10 +84,13 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				}
 			});
 
-			// Every page of the module browser.
+			// The click GUI itself, then every module's settings window.
+			context.setScreen(() -> new HollowScreen(null));
+			context.waitTicks(12);
+			int index = 3;
+			context.takeScreenshot(String.format("hollow-%02d-gui-windows", index++));
 			String[] pages = {"motion_blur", "hollow_hands", "block_finder", "block_esp", "entity_tracers", "hollow_alerts",
 				"interface", "server_rules"};
-			int index = 3;
 			for (String id : pages) {
 				Class<? extends Module> type = Hollow.modules().byId(id).orElseThrow().getClass();
 				context.setScreen(() -> new HollowScreen(null).openOn(type));
@@ -95,7 +98,14 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				context.takeScreenshot(String.format("hollow-%02d-gui-%s", index++, id));
 			}
 
-			// Search filters settings across the page.
+			// Search filters the module list.
+			context.setScreen(() -> new HollowScreen(null));
+			context.waitTicks(8);
+			context.getInput().typeChars("trac");
+			context.waitTicks(8);
+			context.takeScreenshot(String.format("hollow-%02d-gui-search-modules", index++));
+
+			// With a settings window open, search filters its settings.
 			context.setScreen(() -> new HollowScreen(null).openOn(EntityTracersModule.class));
 			context.waitTicks(8);
 			context.getInput().typeChars("color");

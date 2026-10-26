@@ -52,7 +52,7 @@ public final class HudOverlay {
 			if (!ScreenProjector.INSTANCE.project(label.x(), label.y(), label.z(), width, height, projected)) {
 				continue;
 			}
-			float w = (labelWidth(font, label) + 8) * label.scale();
+			float w = (labelWidth(font, label) + 14) * label.scale();
 			float h = 11 * label.scale();
 			float x = projected[0] - w / 2;
 			float y = projected[1] - h;
@@ -85,7 +85,7 @@ public final class HudOverlay {
 		if (contentWidth == 0) {
 			return;
 		}
-		int w = contentWidth + 8;
+		int w = contentWidth + 10;
 		int h = 11;
 		Matrix3x2fStack pose = g.pose();
 		pose.pushMatrix();
@@ -93,9 +93,9 @@ public final class HudOverlay {
 		pose.scale(label.scale(), label.scale());
 		int left = -w / 2;
 		int top = -h;
-		Draw2D.panel(g, left, top, w, h, 0xB80B0910);
-		g.fill(left, top + 1, left + 1, top + h - 1, Colors.withAlpha(label.color(), 230));
-		int textX = left + 4;
+		Draw2D.rounded(g, left - 2, top, w + 4, h, h / 2f, 0xC00B0910);
+		Draw2D.circle(g, left + 2.5f, top + h / 2f, 1.75f, Colors.withAlpha(label.color(), 240));
+		int textX = left + 6;
 		if (titleWidth > 0) {
 			Draw2D.text(g, font, title, textX, top + 2, Colors.withAlpha(Colors.lerp(label.color(), 0xFFFFFFFF, 0.55f), 255));
 		}
@@ -212,12 +212,13 @@ public final class HudOverlay {
 		int accent = Theme.accent();
 		int w = toastWidth(font, alert, count);
 		int h = TOAST_HEIGHT;
+		float radius = 7f;
 		if (full) {
-			Draw2D.glow(g, 0, 0, w, h, Colors.fade(accent, alpha), 4, 0.9f);
+			Draw2D.glow(g, 0, 0, w, h, radius, Colors.fade(accent, alpha), 5, 0.9f);
 		}
-		Draw2D.panel(g, 0, 0, w, h, Colors.fade(0xF20C0A10, alpha));
-		Draw2D.border(g, 0, 0, w, h, Colors.fade(Colors.withAlpha(accent, 120), alpha));
-		g.fill(1, 1, 3, h - 1, Colors.fade(accent, alpha));
+		Draw2D.rounded(g, 0, 0, w, h, radius, Colors.fade(0xF20C0A10, alpha));
+		Draw2D.roundedBorder(g, 0, 0, w, h, radius, 1, Colors.fade(Colors.withAlpha(accent, 120), alpha));
+		Draw2D.rounded(g, 4, 5, 2.5f, h - 10, 1.25f, Colors.fade(accent, alpha));
 		if (full) {
 			Draw2D.scythe(g, 7, 4, 11, Colors.fade(Theme.accentLight(), alpha));
 			Draw2D.spaced(g, font, Alert.PREFIX, 22, 5, Colors.fade(Theme.accentLight(), alpha), 1);
@@ -227,7 +228,7 @@ public final class HudOverlay {
 			int rightX = w - 6;
 			if (!chip.isEmpty()) {
 				int chipW = font.width(chip) + 6;
-				Draw2D.panel(g, rightX - chipW, 3, chipW, 10, Colors.fade(Colors.withAlpha(accent, 90), alpha));
+				Draw2D.rounded(g, rightX - chipW, 3, chipW, 10, 5, Colors.fade(Colors.withAlpha(accent, 90), alpha));
 				Draw2D.text(g, font, chip, rightX - chipW + 3, 4, Colors.fade(Theme.TEXT, alpha));
 				rightX -= chipW + 4;
 			}
