@@ -81,6 +81,16 @@ public final class SkyPresets {
 			Map.entry("texture", "hollow:textures/sky/aurora_veil.png"), Map.entry("texture_opacity", 0.6),
 			Map.entry("silhouettes", "SPIRES"), Map.entry("silhouette_color", "#FF06101A"),
 			Map.entry("cloud_mode", "TINTED"), Map.entry("cloud_color", "#FF8FB8D8"), Map.entry("fog_tint", 0.5))));
+		presets.add(build(defaults, "Hellfire Rift", "A burning night: a black sun ringed in fire, ember stars and a smouldering rift.", Map.ofEntries(
+			Map.entry("time_mode", "FIXED"), Map.entry("motion", "PINNED"),
+			Map.entry("zenith", "#FF0C0204"), Map.entry("horizon", "#FF5A1208"), Map.entry("ground", "#FF0A0203"),
+			Map.entry("horizon_glow", "#FFFF6A1A"), Map.entry("glow_strength", 0.7), Map.entry("gradient", 0.7),
+			Map.entry("sun_style", "ECLIPSE"), Map.entry("sun_color", "#FFFF7A2A"), Map.entry("sun_size", 7.0), Map.entry("sun_glow", 0.9),
+			Map.entry("sun_elevation", 28.0), Map.entry("sun_azimuth", 200.0), Map.entry("moon_style", "HIDDEN"),
+			Map.entry("star_density", 0.3), Map.entry("star_color", "#FFFFB070"), Map.entry("star_variance", 0.4), Map.entry("twinkle", 0.6),
+			Map.entry("nebula", true), Map.entry("nebula_a", "#FF8A1A0A"), Map.entry("nebula_b", "#FF4A0A2A"), Map.entry("nebula_intensity", 0.6),
+			Map.entry("silhouettes", "SPIRES"), Map.entry("silhouette_color", "#FF080203"),
+			Map.entry("cloud_mode", "TINTED"), Map.entry("cloud_color", "#FF7A2A22"), Map.entry("fog_tint", 0.7))));
 		presets.add(build(defaults, VANILLA_ENHANCED, "Minecraft's sky, refined: smoother gradients, softer sun, real moon phases and richer stars.",
 			Map.of()));
 		return presets;

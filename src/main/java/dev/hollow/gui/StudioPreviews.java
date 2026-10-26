@@ -1,6 +1,7 @@
 package dev.hollow.gui;
 
 import dev.hollow.Hollow;
+import dev.hollow.character.CharacterView;
 import dev.hollow.character.Cosmetic;
 import dev.hollow.core.util.Colors;
 import dev.hollow.menu.MenuBackgrounds;
@@ -17,8 +18,6 @@ import dev.hollow.sky.SkyEnums.BodyStyle;
 import dev.hollow.sky.SkyEnums.Silhouettes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.screens.inventory.InventoryScreen;
-import net.minecraft.client.renderer.RenderPipelines;
 
 /** Preview cards for the Studio and menu modules. Pure 2D sketches, except the live player model. */
 final class StudioPreviews {
@@ -103,68 +102,172 @@ final class StudioPreviews {
 		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, state, w - 12), x + 6, y + h - 11, ui.c(sky.isEnabled() ? ui.accentLight : Theme.TEXT_DIM));
 	}
 
-	/** The local player in their cosmetic when in a world; the set's artwork otherwise. */
+	private static float studioYaw = 25f;
+	private static boolean dragging;
+	private static double dragLastX;
+
+	private static float seconds3d() {
+		return (float) (seconds() % 10000.0);
+	}
+
+	/** Geometry of the Character Studio card: one large figure and a gallery of every outfit. */
+	private record StudioLayout(int bigX, int bigY, int bigW, int bigH, int tilesX, int tilesY, int tileW, int tileH, int columns) {
+		int tileX(int index) {
+			return tilesX + (index % columns) * (tileW + CARD_GAP);
+		}
+
+		int tileY(int index) {
+			return tilesY + (index / columns) * (tileH + CARD_GAP);
+		}
+	}
+
+	private static StudioLayout studioLayout(int x, int y, int w, int h) {
+		int bigH = h - 32;
+		int bigW = Math.max(60, Math.min(CharacterView.widthFor(bigH) + 20, w / 3));
+		int tilesX = x + 6 + bigW + 8;
+		int available = x + w - 6 - tilesX;
+		int count = Cosmetic.values().length;
+		int columns = available >= 5 * 44 ? 5 : 3;
+		int rows = (count + columns - 1) / columns;
+		int tileW = (available - CARD_GAP * (columns - 1)) / columns;
+		int tileH = (h - 30 - CARD_GAP * (rows - 1)) / rows;
+		return new StudioLayout(x + 6, y + 14, bigW, bigH, tilesX, y + 14, tileW, tileH, columns);
+	}
+
+	/**
+	 * Your skin wearing the selected outfit as a large 3D figure (drag to turn it), next to a
+	 * gallery of every outfit; clicking a tile wears it.
+	 */
 	static void character(GuiGraphics g, UiContext ui, CharacterStudioModule studio, int x, int y, int w, int h, int mouseX, int mouseY) {
-		Cosmetic cosmetic = studio.cosmetic.get();
-		Minecraft minecraft = Minecraft.getInstance();
-		int boxX = x + 6;
-		int boxW = Math.min(90, w / 2);
-		if (minecraft.player != null) {
-			InventoryScreen.renderEntityInInventoryFollowsMouse(g, boxX, y + 14, boxX + boxW, y + h - 4, (h - 24) / 2, 0.0625f, mouseX, mouseY,
-				minecraft.player);
-		} else if (cosmetic != Cosmetic.NONE) {
-			int ah = h - 18;
-			int aw = ah * 504 / 648;
-			g.blit(RenderPipelines.GUI_TEXTURED, MenuScene.art(cosmetic), boxX + (boxW - aw) / 2, y + 14, 0, 0, aw, ah, 504, 648, 504, 648);
-		} else {
-			Draw2D.centered(g, ui.font, "No set", boxX + boxW / 2, y + h / 2, ui.c(Theme.TEXT_FAINT));
+		Cosmetic selected = studio.cosmetic.get();
+		StudioLayout l = studioLayout(x, y, w, h);
+		float t = seconds3d();
+		g.fillGradient(l.bigX(), l.bigY(), l.bigX() + l.bigW(), l.bigY() + l.bigH(), ui.c(0xFF0B0812),
+			ui.c(Colors.lerp(0xFF0B0812, selected.accent(), 0.3f)));
+		int figureH = l.bigH() - 4;
+		int figureW = Math.min(l.bigW(), CharacterView.widthFor(figureH));
+		int fx = l.bigX() + (l.bigW() - figureW) / 2;
+		float lookYaw = Math.max(-35f, Math.min(35f, (mouseX - (fx + figureW / 2f)) * 0.5f));
+		CharacterView.draw(g, selected, fx, l.bigY() + 2, fx + figureW, l.bigY() + 2 + figureH, studioYaw, -4f, dragging ? 0f : lookYaw, 0f, t, 1f);
+		Draw2D.roundedBorder(g, l.bigX(), l.bigY(), l.bigW(), l.bigH(), 4, 1, ui.c(Theme.BORDER_SOFT));
+
+		Cosmetic hovered = null;
+		Cosmetic[] all = Cosmetic.values();
+		for (int i = 0; i < all.length; i++) {
+			Cosmetic cosmetic = all[i];
+			int tx = l.tileX(i);
+			int ty = l.tileY(i);
+			boolean over = mouseX >= tx && mouseX < tx + l.tileW() && mouseY >= ty && mouseY < ty + l.tileH();
+			if (over) {
+				hovered = cosmetic;
+			}
+			boolean isSelected = cosmetic == selected;
+			g.fillGradient(tx, ty, tx + l.tileW(), ty + l.tileH(), ui.c(over ? 0xFF1A1424 : 0xFF100C16),
+				ui.c(Colors.lerp(0xFF100C16, cosmetic.accent(), isSelected ? 0.4f : 0.18f)));
+			int th = l.tileH() - 4;
+			int tw = Math.min(l.tileW(), CharacterView.widthFor(th));
+			CharacterView.draw(g, cosmetic, tx + (l.tileW() - tw) / 2, ty + 2, tx + (l.tileW() + tw) / 2, ty + 2 + th, 20f, -4f, 0f, 0f,
+				t + i * 0.7f, 0.6f);
+			int border = isSelected ? Colors.lerp(cosmetic.accent(), 0xFFFFFFFF, 0.25f) : over ? Theme.TEXT_FAINT : Theme.BORDER_SOFT;
+			Draw2D.roundedBorder(g, tx, ty, l.tileW(), l.tileH(), 4, isSelected ? 2 : 1, ui.c(border));
 		}
-		int tx = boxX + boxW + 8;
-		Draw2D.text(g, ui.font, cosmetic.displayName(), tx, y + 18, ui.c(Colors.lerp(cosmetic.accent(), 0xFFFFFFFF, 0.3f)));
-		String line1 = minecraft.player != null ? "Live preview: move the mouse" : "Join a world for a live 3D preview";
-		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, line1, w - tx + x - 6), tx, y + 32, ui.c(Theme.TEXT_DIM));
-		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, "Visible only to you", w - tx + x - 6), tx, y + 44, ui.c(Theme.TEXT_FAINT));
-		if (!studio.isEnabled()) {
-			Draw2D.text(g, ui.font, "Module off", tx, y + 56, ui.c(Theme.DANGER));
+
+		Cosmetic named = hovered != null ? hovered : selected;
+		String label = named.displayName() + (named == Cosmetic.NONE ? " (just your skin)" : "");
+		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, label, l.bigW() + 60), x + 6, y + h - 12,
+			ui.c(Colors.lerp(named.accent(), 0xFFFFFFFF, 0.35f)));
+		String hint = studio.isEnabled() ? "Drag to turn · Click a character to wear it · Only you see it" : "Turn the module on to wear it in game";
+		int hintX = x + w - 6 - ui.font.width(hint);
+		if (hintX > x + 6 + ui.font.width(label) + 8) {
+			Draw2D.text(g, ui.font, hint, hintX, y + h - 12, ui.c(studio.isEnabled() ? Theme.TEXT_FAINT : Theme.DANGER));
 		}
 	}
 
-	static int packCardWidth(int w) {
-		return (w - 12 - CARD_GAP * 2) / 3;
+	/** Handles a click on the Character Studio card; returns true when it was used. */
+	static boolean characterClicked(CharacterStudioModule studio, int x, int y, int w, int h, double mouseX, double mouseY) {
+		StudioLayout l = studioLayout(x, y, w, h);
+		if (mouseX >= l.bigX() && mouseX < l.bigX() + l.bigW() && mouseY >= l.bigY() && mouseY < l.bigY() + l.bigH()) {
+			dragging = true;
+			dragLastX = mouseX;
+			return true;
+		}
+		Cosmetic[] all = Cosmetic.values();
+		for (int i = 0; i < all.length; i++) {
+			int tx = l.tileX(i);
+			int ty = l.tileY(i);
+			if (mouseX >= tx && mouseX < tx + l.tileW() && mouseY >= ty && mouseY < ty + l.tileH()) {
+				studio.cosmetic.set(all[i]);
+				if (all[i] != Cosmetic.NONE) {
+					studio.setEnabled(true);
+				}
+				return true;
+			}
+		}
+		return false;
 	}
 
-	/** Three collection cards; the selected one is outlined. Clicking a card selects it. */
+	static boolean characterDragged(double mouseX) {
+		if (!dragging) {
+			return false;
+		}
+		studioYaw += (float) (mouseX - dragLastX) * 2.5f;
+		dragLastX = mouseX;
+		return true;
+	}
+
+	static void characterReleased() {
+		dragging = false;
+	}
+
+	private static final int PACK_COLUMNS = 4;
+
+	private static int packTileW(int w) {
+		return (w - 12 - CARD_GAP * (PACK_COLUMNS - 1)) / PACK_COLUMNS;
+	}
+
+	private static int packTileH(int h) {
+		int rows = (ThemePacksModule.Pack.values().length + PACK_COLUMNS - 1) / PACK_COLUMNS;
+		return (h - 30 - CARD_GAP * (rows - 1)) / rows;
+	}
+
+	/** Every collection as a card with its character in 3D; the selected one is outlined. Clicking a card selects it. */
 	static void themePacks(GuiGraphics g, UiContext ui, ThemePacksModule packs, int x, int y, int w, int h, int mouseX, int mouseY) {
-		int cw = packCardWidth(w);
-		int ch = h - 30;
-		int cy = y + 14;
+		int cw = packTileW(w);
+		int ch = packTileH(h);
+		float t = seconds3d();
+		ThemePacksModule.Pack hovered = null;
 		for (ThemePacksModule.Pack pack : ThemePacksModule.Pack.values()) {
-			int cx = x + 6 + pack.ordinal() * (cw + CARD_GAP);
+			int i = pack.ordinal();
+			int cx = x + 6 + (i % PACK_COLUMNS) * (cw + CARD_GAP);
+			int cy = y + 14 + (i / PACK_COLUMNS) * (ch + CARD_GAP);
 			boolean selected = packs.pack.get() == pack;
-			boolean hovered = mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + ch;
-			g.fillGradient(cx, cy, cx + cw, cy + ch, ui.c(0xFF0B0812), ui.c(Colors.lerp(0xFF0B0812, pack.accent(), 0.35f)));
-			int ah = ch - 14;
-			int aw = ah * 504 / 648;
-			g.blit(RenderPipelines.GUI_TEXTURED, MenuScene.art(pack.cosmetic()), cx + (cw - aw) / 2, cy + 2, 0, 0, aw, ah, 504, 648, 504, 648);
-			Draw2D.centered(g, ui.font, Draw2D.ellipsize(ui.font, pack.cosmetic().displayName(), cw - 4), cx + cw / 2, cy + ch - 11,
+			boolean over = mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + ch;
+			if (over) {
+				hovered = pack;
+			}
+			g.fillGradient(cx, cy, cx + cw, cy + ch, ui.c(0xFF0B0812), ui.c(Colors.lerp(0xFF0B0812, pack.accent(), selected ? 0.45f : 0.25f)));
+			int fh = ch - 13;
+			int fw = Math.min(cw, CharacterView.widthFor(fh));
+			CharacterView.draw(g, pack.cosmetic(), cx + (cw - fw) / 2, cy + 2, cx + (cw + fw) / 2, cy + 2 + fh, 20f, -4f, 0f, 0f, t + i * 0.7f, 0.6f);
+			Draw2D.centered(g, ui.font, Draw2D.ellipsize(ui.font, pack.cosmetic().displayName(), cw - 4), cx + cw / 2, cy + ch - 10,
 				ui.c(selected ? 0xFFFFFFFF : Theme.TEXT_DIM));
-			int border = selected ? Colors.lerp(pack.accent(), 0xFFFFFFFF, 0.2f) : hovered ? Theme.TEXT_FAINT : Theme.BORDER_SOFT;
+			int border = selected ? Colors.lerp(pack.accent(), 0xFFFFFFFF, 0.2f) : over ? Theme.TEXT_FAINT : Theme.BORDER_SOFT;
 			Draw2D.roundedBorder(g, cx, cy, cw, ch, 4, selected ? 2 : 1, ui.c(border));
 		}
-		String status = packs.lastApplied().isEmpty() ? packs.pack.get().description() : packs.lastApplied();
+		ThemePacksModule.Pack shown = hovered != null ? hovered : packs.pack.get();
+		String status = hovered == null && !packs.lastApplied().isEmpty() ? packs.lastApplied() : shown.displayName() + " — " + shown.description();
 		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, status, w - 12), x + 6, y + h - 12, ui.c(Theme.TEXT_DIM));
 	}
 
 	/** Returns the pack under the cursor, or null. */
 	static ThemePacksModule.Pack packAt(int x, int y, int w, int h, double mouseX, double mouseY) {
-		int cw = packCardWidth(w);
-		int cy = y + 14;
-		if (mouseY < cy || mouseY >= cy + h - 30) {
-			return null;
-		}
+		int cw = packTileW(w);
+		int ch = packTileH(h);
 		for (ThemePacksModule.Pack pack : ThemePacksModule.Pack.values()) {
-			int cx = x + 6 + pack.ordinal() * (cw + CARD_GAP);
-			if (mouseX >= cx && mouseX < cx + cw) {
+			int i = pack.ordinal();
+			int cx = x + 6 + (i % PACK_COLUMNS) * (cw + CARD_GAP);
+			int cy = y + 14 + (i / PACK_COLUMNS) * (ch + CARD_GAP);
+			if (mouseX >= cx && mouseX < cx + cw && mouseY >= cy && mouseY < cy + ch) {
 				return pack;
 			}
 		}

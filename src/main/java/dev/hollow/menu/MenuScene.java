@@ -4,11 +4,11 @@ import com.mojang.blaze3d.platform.NativeImage;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.textures.FilterMode;
 import dev.hollow.Hollow;
+import dev.hollow.character.CharacterView;
 import dev.hollow.character.Cosmetic;
 import dev.hollow.core.util.Colors;
 import dev.hollow.modules.CharacterStudioModule;
 import dev.hollow.modules.MainMenuModule;
-import dev.hollow.modules.MainMenuModule.Featured;
 import dev.hollow.modules.MainMenuModule.Scene;
 import dev.hollow.render.Draw2D;
 import dev.hollow.sky.HoloSkyRenderer;
@@ -35,7 +35,6 @@ public final class MenuScene {
 	private static final float[] STAR_SIZE = new float[STARS];
 	private static final float[] STAR_PHASE = new float[STARS];
 	private static final AmbientParticles PARTICLES = new AmbientParticles();
-	private static final Identifier[] ART = new Identifier[Cosmetic.values().length];
 
 	private static DynamicTexture glowTexture;
 	private static long lastFrame = -1;
@@ -45,9 +44,6 @@ public final class MenuScene {
 	private static boolean skyFailed;
 
 	static {
-		for (Cosmetic cosmetic : Cosmetic.values()) {
-			ART[cosmetic.ordinal()] = id("textures/gui/characters/" + (cosmetic == Cosmetic.NONE ? "wraith" : cosmetic.asset()) + ".png");
-		}
 		Random random = new Random(1337);
 		for (int i = 0; i < STARS; i++) {
 			STAR_X[i] = random.nextFloat();
@@ -63,11 +59,6 @@ public final class MenuScene {
 
 	private static Identifier id(String path) {
 		return Identifier.fromNamespaceAndPath(Hollow.MOD_ID, path);
-	}
-
-	/** Artwork for a character set. */
-	public static Identifier art(Cosmetic cosmetic) {
-		return ART[cosmetic.ordinal()];
 	}
 
 	/** Animation clock in seconds, already scaled by the animation intensity setting. */
@@ -87,17 +78,15 @@ public final class MenuScene {
 		return scene;
 	}
 
+	/** The outfit the menu's 3D figure wears, or null when the figure is hidden. */
 	public static Cosmetic featured(MainMenuModule m) {
-		Featured featured = m.character.get();
-		return switch (featured) {
-			case NONE -> Cosmetic.NONE;
+		return switch (m.character.get()) {
+			case NONE -> null;
 			case FOLLOW_STUDIO -> {
 				CharacterStudioModule studio = Hollow.module(CharacterStudioModule.class);
 				yield studio.isEnabled() ? studio.cosmetic.get() : Cosmetic.NONE;
 			}
-			case PHARAOH -> Cosmetic.PHARAOH;
-			case WRAITH -> Cosmetic.WRAITH;
-			case HOLLOW_KNIGHT -> Cosmetic.HOLLOW_KNIGHT;
+			case CHOOSE -> m.featuredCharacter.get();
 		};
 	}
 
@@ -143,8 +132,8 @@ public final class MenuScene {
 		g.fillGradient(0, (int) (h * 0.72f), w, h, 0x00000000, Colors.withAlpha(Colors.lerp(accent, 0xFF000000, 0.65f), (int) (90 * Math.min(1f, lighting))));
 
 		Cosmetic cosmetic = featured(m);
-		if (characterLeftBound >= 0 && cosmetic != Cosmetic.NONE) {
-			drawCharacter(g, cosmetic, w, h, characterLeftBound, px, lighting);
+		if (characterLeftBound >= 0 && cosmetic != null) {
+			drawCharacter(g, cosmetic, w, h, characterLeftBound, px, mouseX, mouseY, motion, lighting);
 		}
 		if (m.particles.get()) {
 			PARTICLES.render(g, w, h, m.particleCount.getInt(), motion, delta, time, accent, 1f);
@@ -282,31 +271,33 @@ public final class MenuScene {
 		g.fill(0, 0, w, h, 0x40000000);
 	}
 
-	private static void drawCharacter(GuiGraphics g, Cosmetic cosmetic, int w, int h, int leftBound, float px, float lighting) {
-		int drawHeight = (int) Math.min(h * 0.66f, 300);
-		int drawWidth = drawHeight * 504 / 648;
+	/** The featured character as a live 3D figure that turns gently and looks towards the mouse. */
+	private static void drawCharacter(GuiGraphics g, Cosmetic cosmetic, int w, int h, int leftBound, float px, int mouseX, int mouseY,
+			float motion, float lighting) {
+		int drawHeight = (int) Math.min(h * 0.7f, 300);
+		int drawWidth = CharacterView.widthFor(drawHeight);
 		// Shrink to the space right of the menu column; hide when there's too little room.
 		int room = w - leftBound - 6;
 		if (drawWidth > room) {
 			drawWidth = room;
-			drawHeight = drawWidth * 648 / 504;
+			drawHeight = Math.round(drawWidth / 0.8f);
 		}
-		if (drawWidth < 70) {
+		if (drawHeight < 90) {
 			return;
 		}
 		float centerX = Math.max(w * 0.8f, leftBound + drawWidth * 0.5f);
-		centerX = Math.min(centerX, w - drawWidth * 0.5f);
-		float bob = (float) Math.sin(time * 0.8f) * 3f;
-		float x = centerX - drawWidth / 2f - px * 22;
-		float y = h - drawHeight - h * 0.04f + bob;
-		glow(g, centerX - px * 22, y + drawHeight * 0.45f, drawWidth * 1.5f, drawHeight * 1.1f,
-			Colors.withAlpha(cosmetic.accent(), (int) (80 * Math.min(1.5f, lighting))));
-		Identifier art = ART[cosmetic.ordinal()];
-		var pose = g.pose();
-		pose.pushMatrix();
-		pose.translate(x, y);
-		g.blit(RenderPipelines.GUI_TEXTURED, art, 0, 0, 0, 0, drawWidth, drawHeight, 504, 648, 504, 648);
-		pose.popMatrix();
+		centerX = Math.min(centerX, w - drawWidth * 0.5f) - px * 22;
+		int bob = Math.round((float) Math.sin(time * 0.8f) * 2f);
+		int x0 = Math.round(centerX - drawWidth / 2f);
+		int y0 = Math.round(h - drawHeight - h * 0.03f) + bob;
+		glow(g, centerX, y0 + drawHeight * 0.5f, drawWidth * 2.2f, drawHeight * 1.15f,
+			Colors.withAlpha(cosmetic.accent(), (int) (85 * Math.min(1.5f, lighting))));
+		// Head follows the mouse; the body turns slowly back and forth.
+		float eyeY = y0 + drawHeight * 0.18f;
+		float lookYaw = mouseX < 0 ? 0f : Math.max(-40f, Math.min(40f, (mouseX - centerX) / w * 90f));
+		float lookPitch = mouseY < 0 ? 0f : Math.max(-20f, Math.min(25f, (mouseY - eyeY) / h * 50f));
+		float yaw = 18f + (float) Math.sin(time * 0.22f) * 14f;
+		CharacterView.draw(g, cosmetic, x0, y0, x0 + drawWidth, y0 + drawHeight, yaw, -4f, lookYaw, lookPitch, time, Math.min(1f, motion));
 	}
 
 	/** An anti-aliased disc, drawn as one textured quad pair. */

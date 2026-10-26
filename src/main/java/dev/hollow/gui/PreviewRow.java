@@ -51,7 +51,7 @@ final class PreviewRow extends Row {
 			case "hollow_alerts" -> 54;
 			case "server_rules" -> 58;
 			case "sky_studio", "main_menu", "loading_screen" -> 104;
-			case "character_studio", "theme_packs" -> 112;
+			case "character_studio", "theme_packs" -> 160;
 			default -> 70;
 		};
 	}
@@ -86,6 +86,9 @@ final class PreviewRow extends Row {
 
 	@Override
 	boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (module instanceof CharacterStudioModule studio && button == 0) {
+			return StudioPreviews.characterClicked(studio, x + PAD, y, width - PAD * 2, height(ui) - 6, mouseX, mouseY);
+		}
 		if (module instanceof ThemePacksModule packs && button == 0) {
 			ThemePacksModule.Pack pack = StudioPreviews.packAt(x + PAD, y, width - PAD * 2, height(ui) - 6, mouseX, mouseY);
 			if (pack != null) {
@@ -94,6 +97,16 @@ final class PreviewRow extends Row {
 			}
 		}
 		return false;
+	}
+
+	@Override
+	boolean mouseDragged(double mouseX, double mouseY) {
+		return module instanceof CharacterStudioModule && StudioPreviews.characterDragged(mouseX);
+	}
+
+	@Override
+	void mouseReleased() {
+		StudioPreviews.characterReleased();
 	}
 
 	private static double seconds() {

@@ -1,0 +1,307 @@
+{
+ "format": "holo-character",
+ "version": 1,
+ "texture": [
+  64,
+  64
+ ],
+ "parts": [
+  {
+   "name": "helmet",
+   "parent": "head",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      0,
+      0
+     ],
+     "from": [
+      -4.0,
+      -8.0,
+      -4.0
+     ],
+     "size": [
+      8,
+      8,
+      8
+     ],
+     "inflate": 1.1
+    }
+   ]
+  },
+  {
+   "name": "antenna",
+   "parent": "head",
+   "pivot": [
+    3,
+    -9,
+    1
+   ],
+   "rotation": [
+    0,
+    0,
+    -0.2
+   ],
+   "cubes": [
+    {
+     "uv": [
+      48,
+      32
+     ],
+     "from": [
+      -0.5,
+      -4.0,
+      -0.5
+     ],
+     "size": [
+      1,
+      4,
+      1
+     ],
+     "inflate": 0.0
+    }
+   ]
+  },
+  {
+   "name": "suit",
+   "parent": "body",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      32,
+      0
+     ],
+     "from": [
+      -4.0,
+      0.0,
+      -2.0
+     ],
+     "size": [
+      8,
+      12,
+      4
+     ],
+     "inflate": 0.35
+    }
+   ]
+  },
+  {
+   "name": "collar_ring",
+   "parent": "body",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      20,
+      32
+     ],
+     "from": [
+      -4.5,
+      -1.0,
+      -2.5
+     ],
+     "size": [
+      9,
+      2,
+      5
+     ],
+     "inflate": 0.3
+    }
+   ]
+  },
+  {
+   "name": "backpack",
+   "parent": "body",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      0,
+      32
+     ],
+     "from": [
+      -3.5,
+      1.0,
+      2.3
+     ],
+     "size": [
+      7,
+      9,
+      3
+     ],
+     "inflate": 0.0
+    }
+   ]
+  },
+  {
+   "name": "sleeve_r",
+   "parent": "right_arm",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      0,
+      16
+     ],
+     "from": [
+      -3.0,
+      -2.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      12,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  },
+  {
+   "name": "sleeve_l",
+   "parent": "left_arm",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      16,
+      16
+     ],
+     "from": [
+      -1.0,
+      -2.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      12,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  },
+  {
+   "name": "leg_r",
+   "parent": "right_leg",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      32,
+      16
+     ],
+     "from": [
+      -2.0,
+      0.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      12,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  },
+  {
+   "name": "leg_l",
+   "parent": "left_leg",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      48,
+      16
+     ],
+     "from": [
+      -2.0,
+      0.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      12,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  }
+ ]
+}

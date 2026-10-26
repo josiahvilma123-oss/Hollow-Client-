@@ -35,11 +35,9 @@ public final class MainMenuModule extends Module {
 	}
 
 	public enum Featured implements EnumSetting.Displayable {
-		NONE("None"),
-		FOLLOW_STUDIO("Character Studio Choice"),
-		PHARAOH("Pharaoh"),
-		WRAITH("Wraith"),
-		HOLLOW_KNIGHT("Hollow Knight");
+		NONE("Hidden"),
+		FOLLOW_STUDIO("Your Character Studio Look"),
+		CHOOSE("A Specific Character");
 
 		private final String label;
 
@@ -51,15 +49,6 @@ public final class MainMenuModule extends Module {
 		public String displayName() {
 			return label;
 		}
-
-		public static Featured fromCosmetic(Cosmetic cosmetic) {
-			return switch (cosmetic) {
-				case PHARAOH -> PHARAOH;
-				case WRAITH -> WRAITH;
-				case HOLLOW_KNIGHT -> HOLLOW_KNIGHT;
-				case NONE -> NONE;
-			};
-		}
 	}
 
 	private static final Pattern FILE_NAME = Pattern.compile("[A-Za-z0-9 _().-]+\\.png");
@@ -70,7 +59,10 @@ public final class MainMenuModule extends Module {
 		FILE_NAME.asMatchPredicate(), "background.png"));
 	public final ActionSetting openFolder = add("Background", new ActionSetting("open_folder", "Backgrounds Folder",
 		"Open the folder custom backgrounds are read from.", "Open folder", () -> Util.getPlatform().openPath(MenuBackgrounds.directory())));
-	public final EnumSetting<Featured> character = add("Character", new EnumSetting<>("character", "Featured Character", "", Featured.FOLLOW_STUDIO));
+	public final EnumSetting<Featured> character = add("Character", new EnumSetting<>("character", "Featured Character",
+		"A 3D figure wearing your skin. Your Character Studio Look follows the outfit you wear in game.", Featured.FOLLOW_STUDIO));
+	public final EnumSetting<Cosmetic> featuredCharacter = add("Character", new EnumSetting<>("featured_character", "Character",
+		"", Cosmetic.GRIM_REAPER));
 	public final ColorSetting accent = add("Lighting", new ColorSetting("accent", "Menu Accent", "Logo glow and button highlights.", 0xFF9D4EDD, false));
 	public final NumberSetting lighting = add("Lighting", new NumberSetting("lighting", "Lighting", "Strength of glows and rim light.", 1.0, 0, 1.5, 0.05).unit("x"));
 	public final NumberSetting animation = add("Animation", new NumberSetting("animation", "Animation Intensity",
@@ -82,6 +74,7 @@ public final class MainMenuModule extends Module {
 	public MainMenuModule() {
 		super("main_menu", "Main Menu", "The Holo title screen. Turn off to restore Minecraft's own menu.", Category.CLIENT, true);
 		customImage.visibleWhen(() -> scene.get() == Scene.CUSTOM);
+		featuredCharacter.visibleWhen(() -> character.get() == Featured.CHOOSE);
 		openFolder.visibleWhen(() -> scene.get() == Scene.CUSTOM);
 		BooleanVisibility.when(particles, particleCount);
 	}

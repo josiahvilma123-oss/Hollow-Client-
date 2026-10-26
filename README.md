@@ -42,14 +42,14 @@ Install: build the jar (see below) or take `build/libs/hollow-<version>.jar`, th
 | Module | What it does |
 |---|---|
 | **Holo Sky Studio** | Replaces the overworld sky with a layered procedural sky. Layers: gradient and horizon glow, optional resource-pack texture, nebula, two star layers, planets with rings, sun and moon styles (disc, halo, crescent, eclipse), an ornamental celestial ring, and horizon silhouettes. Ships seven original presets: Anubis Eclipse, Void Realm, Pharaoh's Night, Astral Horizon, Crimson Dusk, Frozen Cosmos and Vanilla Enhanced. The library has search, Save, Save As, Rename, Duplicate, Delete, Revert, Export, Import and *Restore Vanilla Sky*. Simple mode shows the essentials; *Advanced Controls* shows every parameter. Off by default. |
-| **Character Studio** | Original Pharaoh, Wraith and Hollow Knight cosmetic sets drawn on your own player (third person and inventory). Client-side only: nobody else sees them and nothing is sent to servers. Includes a live 3D preview. |
-| **Theme Packs** | Pharaoh, Wraith and Hollow Knight collections. Each bundles a sky, character set, interface accent, hand-animation preset with trail color, and menu scene. Apply only the ticked components, or the whole collection. Applying a sky never changes your character or interface, and the reverse holds too. |
+| **Character Studio** | Eight original 3D outfits worn on your own skin: Grim Reaper, Shadow Ninja, Frost Witch, Infernal Demon, Star Voyager, Pharaoh, Wraith and Hollow Knight. They show in third person, the inventory and the menus. The studio page has a large 3D figure you can drag to turn, and a 3D gallery where one click wears an outfit. Client-side only: nobody else sees them and nothing is sent to servers. |
+| **Theme Packs** | Eight collections (Pharaoh, Wraith, Hollow Knight, Reaper, Shadow, Frost, Infernal, Voyager). Each bundles a sky, outfit, interface accent, hand-animation preset with trail color, and menu scene. Apply only the ticked components, or the whole collection. Applying a sky never changes your character or interface, and the reverse holds too. |
 
 ### Client
 
 | Module | What it does |
 |---|---|
-| **Main Menu** | The Holo title screen. Scenes: Temple of Anubis, Pyramids at Night, Void Realm, your Sky Studio sky, or a custom PNG from `config/hollow/backgrounds/`. It adds a featured character, particles, and a glowing logo with a celestial ring. It keeps every vanilla entry (Singleplayer, Multiplayer, Realms, Options, Language, Accessibility, Quit, Credits) and adds Character Studio, Sky Studio and Client Settings. Other out-of-world menus share its backdrop. *Vanilla Menu* or turning the module off restores Minecraft's own title screen. |
+| **Main Menu** | The Holo title screen. Scenes: Temple of Anubis, Pyramids at Night, Void Realm, your Sky Studio sky, or a custom PNG from `config/hollow/backgrounds/`. It adds a live 3D figure of you in your outfit (or any character) that looks towards the mouse, particles, and a glowing logo with a celestial ring. It keeps every vanilla entry (Singleplayer, Multiplayer, Realms, Options, Language, Accessibility, Quit, Credits) and adds Character Studio, Sky Studio and Client Settings. Other out-of-world menus share its backdrop. *Vanilla Menu* or turning the module off restores Minecraft's own title screen. |
 | **Loading Screen** | Restyles Minecraft's loading overlay with a logo reveal and a ring that fills with the **real** reload progress, plus a status line, particles and a comet trail. Offers reduced motion, a speed setting, and *Skip Fade-Out* for a quick hand-off to the menu. It never delays loading. |
 | **Performance** | Quality, Balanced and Low Performance profiles that scale sky detail, menu and loading effects, motion blur and swing trails. |
 | **Interface** | Accent color, panel opacity, backdrop dim, descriptions, animation speed. |
@@ -132,7 +132,14 @@ All injections are optional (`defaultRequire: 0`) and pass straight through when
 
 Holo's own shader pipelines are not registered as required pipelines. They compile on first use, so a graphics driver that rejects one only turns off that effect; it can never stop the game from loading.
 
-Character cosmetics use Fabric API's `EntityModelLayerRegistry` and `LivingEntityFeatureRendererRegistrationCallback`. No mixin is involved.
+Character outfits use Fabric API's `EntityModelLayerRegistry` and `LivingEntityFeatureRendererRegistrationCallback`; the 3D figures in menus use its `SpecialGuiElementRegistry`. No mixin is involved.
+
+### Adding a character
+
+1. Add a function to `tools/characters.py` describing its pieces and paint, call it at the bottom, and run `python3 tools/characters.py`.
+2. Add an entry to the `Cosmetic` enum with the same id. Its view height should cover hats and horns.
+
+It then appears in Character Studio, the menu options and the in-game layer.
 
 ## Performance
 
@@ -184,13 +191,14 @@ src/main/java/dev/hollow/
   policy/        Server rules (pure) and connection context
   render/        Pipelines, world overlay, HUD labels and toasts, theme, 2D drawing
   sky/           Sky Studio renderer, presets and preset store
-  character/     Character Studio cosmetics: models and render layer
+  character/     Character Studio outfits: model loading, in-game render layer, 3D menu renderer
   menu/          Holo title screen, menu scene, loading screen, buttons, pixel font
   gui/           Module browser screen and setting widgets
   mixin/         Render, screen and loading hooks (see the table above)
 src/main/resources/assets/hollow/shaders/   Line, motion blur and sky shaders
 src/main/resources/assets/hollow/textures/  Menu scenes, character artwork, cosmetic skins, sky texture
-tools/generate_art.py                       Regenerates the original artwork (Python + Pillow)
+tools/generate_art.py                       Regenerates the menu scenes and sky texture (Python + Pillow)
+tools/characters.py                         Defines every outfit and writes its 3D model (assets/hollow/characters) and texture
 src/test/        Unit tests
 src/gametest/    In-game client test with screenshots
 ```

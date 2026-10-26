@@ -189,7 +189,10 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				client.player.setXRot(10f);
 				Hollow.module(CharacterStudioModule.class).setEnabled(true);
 			});
-			for (Cosmetic cosmetic : new Cosmetic[] {Cosmetic.PHARAOH, Cosmetic.WRAITH, Cosmetic.HOLLOW_KNIGHT}) {
+			for (Cosmetic cosmetic : Cosmetic.values()) {
+				if (cosmetic == Cosmetic.NONE) {
+					continue;
+				}
 				context.runOnClient(client -> Hollow.module(CharacterStudioModule.class).cosmetic.set(cosmetic));
 				context.waitTicks(4);
 				context.takeScreenshot(String.format("hollow-%02d-cosmetic-%s", index++, cosmetic.asset()));
@@ -200,7 +203,8 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				packs.applyAll.run();
 				if (!Hollow.module(SkyStudioModule.class).preset.get().equals("Pharaoh's Night")
 						|| Hollow.module(CharacterStudioModule.class).cosmetic.get() != Cosmetic.PHARAOH
-						|| Hollow.module(MainMenuModule.class).scene.get() != MainMenuModule.Scene.TEMPLE) {
+						|| Hollow.module(MainMenuModule.class).scene.get() != MainMenuModule.Scene.TEMPLE
+						|| Hollow.module(MainMenuModule.class).featuredCharacter.get() != Cosmetic.PHARAOH) {
 					throw new AssertionError("Theme pack did not apply every component: " + packs.lastApplied());
 				}
 				// Applying only the character must leave the sky alone.
@@ -256,7 +260,9 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			if (!(client.screen instanceof HoloTitleScreen)) {
 				throw new AssertionError("Title screen was not replaced: " + client.screen);
 			}
-			Hollow.module(MainMenuModule.class).character.set(MainMenuModule.Featured.WRAITH);
+			MainMenuModule menu = Hollow.module(MainMenuModule.class);
+			menu.character.set(MainMenuModule.Featured.CHOOSE);
+			menu.featuredCharacter.set(Cosmetic.GRIM_REAPER);
 		});
 		context.waitTicks(10);
 		context.takeScreenshot("holo-01-menu-temple");
@@ -267,7 +273,12 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			context.runOnClient(client -> {
 				MainMenuModule menu = Hollow.module(MainMenuModule.class);
 				menu.scene.set(scene);
-				menu.character.set(scene == MainMenuModule.Scene.PYRAMIDS ? MainMenuModule.Featured.PHARAOH : MainMenuModule.Featured.HOLLOW_KNIGHT);
+				menu.featuredCharacter.set(switch (scene) {
+					case PYRAMIDS -> Cosmetic.PHARAOH;
+					case VOID -> Cosmetic.SHADOW_NINJA;
+					case SKY -> Cosmetic.FROST_WITCH;
+					default -> Cosmetic.STAR_VOYAGER;
+				});
 				if (scene == MainMenuModule.Scene.SKY) {
 					Hollow.module(SkyStudioModule.class).applyPreset("Anubis Eclipse");
 				}
@@ -278,10 +289,17 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 		context.runOnClient(client -> {
 			MainMenuModule menu = Hollow.module(MainMenuModule.class);
 			menu.scene.set(MainMenuModule.Scene.TEMPLE);
-			menu.character.set(MainMenuModule.Featured.WRAITH);
+			menu.featuredCharacter.set(Cosmetic.INFERNAL_DEMON);
 			Hollow.module(SkyStudioModule.class).applyPreset("Vanilla Enhanced");
 		});
 		context.waitTicks(8);
+
+		// Character Studio from the menu: a large 3D figure and the gallery of every outfit.
+		context.runOnClient(client -> Hollow.module(CharacterStudioModule.class).cosmetic.set(Cosmetic.GRIM_REAPER));
+		context.setScreen(() -> new HollowScreen(new HoloTitleScreen()).openOn(CharacterStudioModule.class));
+		context.waitTicks(12);
+		context.takeScreenshot(String.format("holo-%02d-menu-character-studio", index++));
+		context.runOnClient(client -> Hollow.module(CharacterStudioModule.class).cosmetic.set(Cosmetic.NONE));
 
 		// Studio pages opened from the menu keep the scene behind them.
 		context.setScreen(() -> new HollowScreen(new HoloTitleScreen()).openOn(SkyStudioModule.class));

@@ -18,6 +18,10 @@ public final class ConfigMigrations {
 			current = toV2(current);
 			version = 2;
 		}
+		if (version < 3) {
+			current = toV3(current);
+			version = 3;
+		}
 		current.addProperty("version", version);
 		return current;
 	}
@@ -30,5 +34,36 @@ public final class ConfigMigrations {
 			root.add("modules", new JsonObject());
 		}
 		return root;
+	}
+
+	/**
+	 * v2 to v3: the main menu's "Featured Character" used to name a character directly
+	 * (PHARAOH, WRAITH, HOLLOW_KNIGHT). It is now "CHOOSE" plus a separate character setting.
+	 */
+	private static JsonObject toV3(JsonObject root) {
+		JsonObject settings = settingsOf(root, "main_menu");
+		if (settings != null && settings.has("character") && settings.get("character").isJsonPrimitive()) {
+			String old = settings.get("character").getAsString();
+			if (old.equals("PHARAOH") || old.equals("WRAITH") || old.equals("HOLLOW_KNIGHT")) {
+				settings.addProperty("character", "CHOOSE");
+				settings.addProperty("featured_character", old);
+			}
+		}
+		return root;
+	}
+
+	private static JsonObject settingsOf(JsonObject root, String moduleId) {
+		if (!root.has("modules") || !root.get("modules").isJsonObject()) {
+			return null;
+		}
+		JsonObject modules = root.getAsJsonObject("modules");
+		if (!modules.has(moduleId) || !modules.get(moduleId).isJsonObject()) {
+			return null;
+		}
+		JsonObject module = modules.getAsJsonObject(moduleId);
+		if (!module.has("settings") || !module.get("settings").isJsonObject()) {
+			return null;
+		}
+		return module.getAsJsonObject("settings");
 	}
 }

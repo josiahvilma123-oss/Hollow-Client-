@@ -22,7 +22,17 @@ public final class ThemePacksModule extends Module {
 		WRAITH("Wraith Collection", "A shadow-hooded wraith in the Void Realm, with spectral violet trails.",
 			"Void Realm", Cosmetic.WRAITH, 0xFF7B3FD0, 0x887B3FD0, HandPreset.SUBTLE, MainMenuModule.Scene.VOID),
 		HOLLOW_KNIGHT("Hollow Knight Collection", "An original armored knight beneath the Anubis Eclipse, with stylized swings.",
-			"Anubis Eclipse", Cosmetic.HOLLOW_KNIGHT, 0xFFB9A6FF, 0x99C9A0FF, HandPreset.STYLIZED, MainMenuModule.Scene.SKY);
+			"Anubis Eclipse", Cosmetic.HOLLOW_KNIGHT, 0xFFB9A6FF, 0x99C9A0FF, HandPreset.STYLIZED, MainMenuModule.Scene.SKY),
+		GRIM_REAPER("Reaper Collection", "A skull-masked reaper with a scythe on his back, under the starless Void Realm.",
+			"Void Realm", Cosmetic.GRIM_REAPER, 0xFF9D4EDD, 0x889D4EDD, HandPreset.SMOOTH, MainMenuModule.Scene.VOID),
+		SHADOW_NINJA("Shadow Collection", "A masked ninja with a katana and trailing scarf, beneath an endless crimson dusk.",
+			"Crimson Dusk", Cosmetic.SHADOW_NINJA, 0xFFD0453F, 0x88E0503C, HandPreset.STYLIZED, MainMenuModule.Scene.SKY),
+		FROST_WITCH("Frost Collection", "A frost witch in a starry cape and tall hat, under an aurora-lit frozen sky.",
+			"Frozen Cosmos", Cosmetic.FROST_WITCH, 0xFF8FDCFF, 0x889FE6FF, HandPreset.SMOOTH, MainMenuModule.Scene.SKY),
+		INFERNAL_DEMON("Infernal Collection", "Horns, wings and ember-cracked armor beneath a black sun ringed in fire.",
+			"Hellfire Rift", Cosmetic.INFERNAL_DEMON, 0xFFFF7A2A, 0x88FF6A1A, HandPreset.STYLIZED, MainMenuModule.Scene.SKY),
+		STAR_VOYAGER("Voyager Collection", "A space suit with a gold visor, drifting under ringed planets.",
+			"Astral Horizon", Cosmetic.STAR_VOYAGER, 0xFFF0A040, 0x88FFC070, HandPreset.SUBTLE, MainMenuModule.Scene.SKY);
 
 		private final String displayName;
 		private final String description;
@@ -130,7 +140,8 @@ public final class ThemePacksModule extends Module {
 		if (everything || applyMenu.get()) {
 			MainMenuModule menu = Hollow.module(MainMenuModule.class);
 			menu.scene.set(p.scene);
-			menu.character.set(MainMenuModule.Featured.fromCosmetic(p.cosmetic()));
+			menu.character.set(MainMenuModule.Featured.CHOOSE);
+			menu.featuredCharacter.set(p.cosmetic());
 			changed.add("menu");
 		}
 		lastApplied = changed.isEmpty() ? "Nothing selected" : "Applied " + p.displayName() + ": " + String.join(", ", changed);

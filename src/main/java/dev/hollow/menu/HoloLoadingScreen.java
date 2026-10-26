@@ -1,14 +1,13 @@
 package dev.hollow.menu;
 
 import dev.hollow.Hollow;
+import dev.hollow.character.CharacterView;
 import dev.hollow.character.Cosmetic;
 import dev.hollow.core.util.Colors;
 import dev.hollow.modules.LoadingScreenModule;
 import dev.hollow.modules.MainMenuModule;
 import dev.hollow.render.Draw2D;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.renderer.RenderPipelines;
-import net.minecraft.resources.Identifier;
 
 /**
  * Draws the Holo loading screen inside Minecraft's own loading overlay. Progress is the real
@@ -73,7 +72,7 @@ public final class HoloLoadingScreen {
 		MenuScene.glow(g, cx, cy, r * 5.5f, r * 4.2f, Colors.fade(Colors.withAlpha(ACCENT, (int) (95 * pulse)), alpha));
 
 		if (reload && m.character.get()) {
-			drawCharacter(g, w, h, alpha);
+			drawCharacter(g, w, h, alpha, t, reduced);
 		}
 		if (m.particles.get() && !reduced) {
 			particles.render(g, w, h, 45, speed, delta, t, ACCENT, alpha);
@@ -136,17 +135,18 @@ public final class HoloLoadingScreen {
 		}
 	}
 
-	private static void drawCharacter(GuiGraphics g, int w, int h, float alpha) {
+	/** The featured character in 3D. It can't fade, so it only shows once the overlay is mostly opaque. */
+	private static void drawCharacter(GuiGraphics g, int w, int h, float alpha, float time, boolean reduced) {
 		Cosmetic cosmetic = MenuScene.featured(Hollow.module(MainMenuModule.class));
-		if (cosmetic == Cosmetic.NONE || w < 420) {
+		if (cosmetic == null || w < 420 || alpha < 0.75f) {
 			return;
 		}
 		int drawHeight = (int) Math.min(h * 0.5f, 220);
-		int drawWidth = drawHeight * 504 / 648;
+		int drawWidth = CharacterView.widthFor(drawHeight);
 		int x = (int) (w * 0.82f - drawWidth / 2f);
 		int y = (int) (h * 0.92f - drawHeight);
-		Identifier art = MenuScene.art(cosmetic);
-		g.blit(RenderPipelines.GUI_TEXTURED, art, x, y, 0, 0, drawWidth, drawHeight, 504, 648, 504, 648, Colors.fade(0xFFFFFFFF, alpha * 0.85f));
+		float yaw = reduced ? 20f : 20f + (float) Math.sin(time * 0.4f) * 15f;
+		CharacterView.draw(g, cosmetic, x, y, x + drawWidth, y + drawHeight, yaw, -4f, 0f, 0f, time, reduced ? 0f : 1f);
 	}
 
 	/** Status line and progress bar. {@code alpha} fades them out once loading completes. */

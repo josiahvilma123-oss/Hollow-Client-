@@ -31,7 +31,7 @@ public final class ConfigManager {
 	 * 2 - Holo update: Sky Studio, Character Studio, theme packs, main menu, loading screen,
 	 *     performance. Existing module settings are untouched; new modules start at defaults.
 	 */
-	public static final int VERSION = 2;
+	public static final int VERSION = 3;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	private final Path file;

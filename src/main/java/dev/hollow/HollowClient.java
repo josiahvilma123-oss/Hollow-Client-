@@ -22,6 +22,7 @@ import dev.hollow.render.HollowPipelines;
 import dev.hollow.render.HudOverlay;
 import dev.hollow.render.ScreenProjector;
 import dev.hollow.render.WorldOverlayRenderer;
+import dev.hollow.character.CharacterView;
 import dev.hollow.character.CosmeticModels;
 import dev.hollow.modules.CharacterStudioModule;
 import dev.hollow.modules.LoadingScreenModule;
@@ -100,6 +101,7 @@ public final class HollowClient implements ClientModInitializer {
 		});
 
 		CosmeticModels.register();
+		CharacterView.register();
 
 		ConfigManager config = new ConfigManager(FabricLoader.getInstance().getConfigDir().resolve("hollow").resolve("hollow.json"),
 			modules, Clock.SYSTEM, 750, Hollow.LOGGER::warn);

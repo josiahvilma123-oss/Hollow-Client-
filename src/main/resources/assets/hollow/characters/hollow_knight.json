@@ -1,0 +1,340 @@
+{
+ "format": "holo-character",
+ "version": 1,
+ "texture": [
+  64,
+  64
+ ],
+ "parts": [
+  {
+   "name": "helm",
+   "parent": "head",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      20,
+      0
+     ],
+     "from": [
+      -4.5,
+      -8.6,
+      -4.5
+     ],
+     "size": [
+      9,
+      9,
+      9
+     ],
+     "inflate": 0.15
+    }
+   ]
+  },
+  {
+   "name": "crest",
+   "parent": "head",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      24,
+      19
+     ],
+     "from": [
+      -0.5,
+      -12.5,
+      -3.0
+     ],
+     "size": [
+      1,
+      4,
+      7
+     ],
+     "inflate": 0.0
+    }
+   ]
+  },
+  {
+   "name": "breastplate",
+   "parent": "body",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      0,
+      19
+     ],
+     "from": [
+      -4.0,
+      0.0,
+      -2.0
+     ],
+     "size": [
+      8,
+      12,
+      4
+     ],
+     "inflate": 0.4
+    }
+   ]
+  },
+  {
+   "name": "cape",
+   "parent": "body",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      0,
+      0
+     ],
+     "from": [
+      -4.5,
+      0.2,
+      2.6
+     ],
+     "size": [
+      9,
+      18,
+      1
+     ],
+     "inflate": 0.0
+    }
+   ]
+  },
+  {
+   "name": "pauldron_r",
+   "parent": "right_arm",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      16,
+      35
+     ],
+     "from": [
+      -4.0,
+      -2.8,
+      -3.0
+     ],
+     "size": [
+      5,
+      3,
+      6
+     ],
+     "inflate": 0.1
+    }
+   ]
+  },
+  {
+   "name": "pauldron_l",
+   "parent": "left_arm",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      38,
+      35
+     ],
+     "from": [
+      -1.0,
+      -2.8,
+      -3.0
+     ],
+     "size": [
+      5,
+      3,
+      6
+     ],
+     "inflate": 0.1
+    }
+   ]
+  },
+  {
+   "name": "gauntlet_r",
+   "parent": "right_arm",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      0,
+      46
+     ],
+     "from": [
+      -3.0,
+      7.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      5,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  },
+  {
+   "name": "gauntlet_l",
+   "parent": "left_arm",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      16,
+      46
+     ],
+     "from": [
+      -1.0,
+      7.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      5,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  },
+  {
+   "name": "greave_r",
+   "parent": "right_leg",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      40,
+      19
+     ],
+     "from": [
+      -2.0,
+      5.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      7,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  },
+  {
+   "name": "greave_l",
+   "parent": "left_leg",
+   "pivot": [
+    0,
+    0,
+    0
+   ],
+   "rotation": [
+    0,
+    0,
+    0
+   ],
+   "cubes": [
+    {
+     "uv": [
+      0,
+      35
+     ],
+     "from": [
+      -2.0,
+      5.0,
+      -2.0
+     ],
+     "size": [
+      4,
+      7,
+      4
+     ],
+     "inflate": 0.3
+    }
+   ]
+  }
+ ]
+}

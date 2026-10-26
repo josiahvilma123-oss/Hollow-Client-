@@ -4,7 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dev.hollow.core.config.ConfigManager;
+import dev.hollow.core.config.ConfigMigrations;
 import dev.hollow.core.module.Category;
 import dev.hollow.core.module.Module;
 import dev.hollow.core.module.ModuleManager;
@@ -160,6 +163,26 @@ class ConfigManagerTest {
 		assertTrue(added.isEnabled());
 		assertTrue(Files.exists(dir.resolve("hollow.json.v1.bak")));
 		config.tick();
-		assertTrue(Files.readString(file).contains("\"version\": 2"));
+		assertTrue(Files.readString(file).contains("\"version\": 3"));
+	}
+
+	@Test
+	void migratesNamedFeaturedCharacterToChooseSetting() {
+		JsonObject v2 = JsonParser.parseString("""
+			{"version":2,"modules":{"main_menu":{"enabled":true,"settings":{"character":"WRAITH","scene":"VOID"}}}}
+			""").getAsJsonObject();
+		JsonObject settings = ConfigMigrations.migrate(v2, 2, log::add)
+			.getAsJsonObject("modules").getAsJsonObject("main_menu").getAsJsonObject("settings");
+		assertEquals("CHOOSE", settings.get("character").getAsString());
+		assertEquals("WRAITH", settings.get("featured_character").getAsString());
+		assertEquals("VOID", settings.get("scene").getAsString());
+
+		JsonObject following = JsonParser.parseString("""
+			{"version":2,"modules":{"main_menu":{"settings":{"character":"FOLLOW_STUDIO"}}}}
+			""").getAsJsonObject();
+		JsonObject kept = ConfigMigrations.migrate(following, 2, log::add)
+			.getAsJsonObject("modules").getAsJsonObject("main_menu").getAsJsonObject("settings");
+		assertEquals("FOLLOW_STUDIO", kept.get("character").getAsString());
+		assertFalse(kept.has("featured_character"));
 	}
 }

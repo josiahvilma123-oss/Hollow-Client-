@@ -1,9 +1,18 @@
 package dev.hollow.character;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import dev.hollow.Hollow;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
 import net.fabricmc.fabric.api.client.rendering.v1.EntityModelLayerRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
-import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.model.geom.PartPose;
 import net.minecraft.client.model.geom.builders.CubeDeformation;
 import net.minecraft.client.model.geom.builders.CubeListBuilder;
@@ -13,39 +22,26 @@ import net.minecraft.client.model.geom.builders.PartDefinition;
 import net.minecraft.client.model.player.PlayerModel;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.player.AvatarRenderer;
-import net.minecraft.resources.Identifier;
 
 /**
- * Original cosmetic geometry, built on the player mesh so every piece follows the player's head,
- * body and arm animation. Units are skin pixels, like vanilla models.
+ * Builds outfit geometry from {@code assets/hollow/characters/<id>.json} (written by
+ * {@code tools/characters.py}). Every piece hangs off the player mesh's head, body, arms or legs,
+ * so it follows the player's own animation. Units are skin pixels, like vanilla models.
  */
 public final class CosmeticModels {
-	public static final ModelLayerLocation PHARAOH = layer("pharaoh");
-	public static final ModelLayerLocation WRAITH = layer("wraith");
-	public static final ModelLayerLocation HOLLOW_KNIGHT = layer("hollow_knight");
+	private static final String[] BONES = {"head", "body", "right_arm", "left_arm", "right_leg", "left_leg"};
 
 	private CosmeticModels() {
 	}
 
-	private static ModelLayerLocation layer(String name) {
-		return new ModelLayerLocation(Identifier.fromNamespaceAndPath(Hollow.MOD_ID, "cosmetic_" + name), "main");
-	}
-
-	public static ModelLayerLocation layerFor(Cosmetic cosmetic) {
-		return switch (cosmetic) {
-			case PHARAOH -> PHARAOH;
-			case WRAITH -> WRAITH;
-			case HOLLOW_KNIGHT -> HOLLOW_KNIGHT;
-			case NONE -> throw new IllegalArgumentException("No model for NONE");
-		};
-	}
-
-	/** Registers the cosmetic model layers and attaches {@link CosmeticLayer} to player renderers. */
+	/** Registers every outfit's model layer and attaches {@link CosmeticLayer} to player renderers. */
 	@SuppressWarnings({"unchecked", "rawtypes"})
 	public static void register() {
-		EntityModelLayerRegistry.registerModelLayer(PHARAOH, CosmeticModels::pharaoh);
-		EntityModelLayerRegistry.registerModelLayer(WRAITH, CosmeticModels::wraith);
-		EntityModelLayerRegistry.registerModelLayer(HOLLOW_KNIGHT, CosmeticModels::hollowKnight);
+		for (Cosmetic cosmetic : Cosmetic.values()) {
+			if (cosmetic.layer() != null) {
+				EntityModelLayerRegistry.registerModelLayer(cosmetic.layer(), () -> load(cosmetic));
+			}
+		}
 		LivingEntityFeatureRendererRegistrationCallback.EVENT.register((type, renderer, helper, context) -> {
 			if (renderer instanceof AvatarRenderer<?> avatar) {
 				helper.register(new CosmeticLayer((RenderLayerParent) avatar, context.getModelSet()));
@@ -53,63 +49,59 @@ public final class CosmeticModels {
 		});
 	}
 
-	private static PartDefinition emptyPlayer(MeshDefinition mesh) {
-		return mesh.getRoot().clearRecursively();
+	/** Reads an outfit definition. A missing or broken file gives an empty model instead of a crash. */
+	static LayerDefinition load(Cosmetic cosmetic) {
+		String path = "/assets/" + Hollow.MOD_ID + "/characters/" + cosmetic.asset() + ".json";
+		try (InputStream in = CosmeticModels.class.getResourceAsStream(path)) {
+			if (in == null) {
+				throw new IOException("missing " + path);
+			}
+			return build(JsonParser.parseReader(new InputStreamReader(in, StandardCharsets.UTF_8)).getAsJsonObject());
+		} catch (IOException | RuntimeException e) {
+			Hollow.LOGGER.error("Could not load the {} outfit; it will be invisible", cosmetic.displayName(), e);
+			MeshDefinition mesh = PlayerModel.createMesh(CubeDeformation.NONE, false);
+			mesh.getRoot().clearRecursively();
+			return LayerDefinition.create(mesh, 64, 64);
+		}
 	}
 
-	/** Nemes headdress with lappets and uraeus, plus a broad collar. */
-	public static LayerDefinition pharaoh() {
+	static LayerDefinition build(JsonObject model) {
 		MeshDefinition mesh = PlayerModel.createMesh(CubeDeformation.NONE, false);
-		PartDefinition root = emptyPlayer(mesh);
-		root.getChild("head").addOrReplaceChild("nemes", CubeListBuilder.create()
-				.texOffs(0, 0).addBox(-4.5F, -8.6F, -4.5F, 9.0F, 4.0F, 9.0F, new CubeDeformation(0.2F))
-				.texOffs(0, 16).addBox(-5.2F, -5.0F, -2.0F, 1.0F, 10.0F, 3.0F)
-				.texOffs(0, 16).addBox(4.2F, -5.0F, -2.0F, 1.0F, 10.0F, 3.0F)
-				.texOffs(16, 16).addBox(-4.5F, -5.0F, 3.8F, 9.0F, 8.0F, 1.0F)
-				.texOffs(0, 48).addBox(-0.5F, -10.2F, -5.0F, 1.0F, 2.0F, 1.0F),
-			PartPose.ZERO);
-		root.getChild("body").addOrReplaceChild("collar", CubeListBuilder.create()
-				.texOffs(0, 48).addBox(-4.5F, -0.2F, -2.5F, 9.0F, 3.0F, 5.0F, new CubeDeformation(0.1F)),
-			PartPose.ZERO);
-		return LayerDefinition.create(mesh, 64, 64);
+		PartDefinition root = mesh.getRoot().clearRecursively();
+		Map<String, PartDefinition> parts = new HashMap<>();
+		for (String bone : BONES) {
+			parts.put(bone, root.getChild(bone));
+		}
+		for (JsonElement element : model.getAsJsonArray("parts")) {
+			JsonObject part = element.getAsJsonObject();
+			PartDefinition parent = parts.get(part.get("parent").getAsString());
+			if (parent == null) {
+				throw new IllegalArgumentException("Unknown parent " + part.get("parent") + " for " + part.get("name"));
+			}
+			CubeListBuilder cubes = CubeListBuilder.create();
+			for (JsonElement cubeElement : part.getAsJsonArray("cubes")) {
+				JsonObject cube = cubeElement.getAsJsonObject();
+				float[] uv = floats(cube.getAsJsonArray("uv"));
+				float[] from = floats(cube.getAsJsonArray("from"));
+				float[] size = floats(cube.getAsJsonArray("size"));
+				cubes.texOffs((int) uv[0], (int) uv[1])
+					.addBox(from[0], from[1], from[2], size[0], size[1], size[2], new CubeDeformation(cube.get("inflate").getAsFloat()));
+			}
+			float[] pivot = floats(part.getAsJsonArray("pivot"));
+			float[] rotation = floats(part.getAsJsonArray("rotation"));
+			String name = part.get("name").getAsString();
+			parts.put(name, parent.addOrReplaceChild(name, cubes,
+				PartPose.offsetAndRotation(pivot[0], pivot[1], pivot[2], rotation[0], rotation[1], rotation[2])));
+		}
+		JsonArray texture = model.getAsJsonArray("texture");
+		return LayerDefinition.create(mesh, texture.get(0).getAsInt(), texture.get(1).getAsInt());
 	}
 
-	/** Deep hood and a long cloak with a violet-trimmed mantle. */
-	public static LayerDefinition wraith() {
-		MeshDefinition mesh = PlayerModel.createMesh(CubeDeformation.NONE, false);
-		PartDefinition root = emptyPlayer(mesh);
-		root.getChild("head").addOrReplaceChild("hood", CubeListBuilder.create()
-				.texOffs(0, 0).addBox(-5.0F, -9.2F, -5.2F, 10.0F, 1.0F, 10.0F)
-				.texOffs(0, 12).addBox(-5.2F, -8.4F, -5.2F, 1.0F, 9.0F, 10.0F)
-				.texOffs(0, 12).addBox(4.2F, -8.4F, -5.2F, 1.0F, 9.0F, 10.0F)
-				.texOffs(22, 12).addBox(-5.0F, -8.4F, 4.0F, 10.0F, 9.0F, 1.0F),
-			PartPose.ZERO);
-		root.getChild("body").addOrReplaceChild("cloak", CubeListBuilder.create()
-				.texOffs(0, 32).addBox(-5.0F, -0.4F, 2.6F, 10.0F, 22.0F, 1.0F)
-				.texOffs(0, 48).addBox(-5.0F, -0.6F, -3.0F, 10.0F, 3.0F, 6.0F, new CubeDeformation(0.15F)),
-			PartPose.ZERO);
-		return LayerDefinition.create(mesh, 64, 64);
-	}
-
-	/** Visored helm with a crest, broad pauldrons and a short cape. */
-	public static LayerDefinition hollowKnight() {
-		MeshDefinition mesh = PlayerModel.createMesh(CubeDeformation.NONE, false);
-		PartDefinition root = emptyPlayer(mesh);
-		root.getChild("head").addOrReplaceChild("helm", CubeListBuilder.create()
-				.texOffs(0, 0).addBox(-4.5F, -8.6F, -4.5F, 9.0F, 9.0F, 9.0F, new CubeDeformation(0.15F))
-				.texOffs(0, 48).addBox(-3.0F, -5.6F, -4.9F, 6.0F, 1.0F, 1.0F)
-				.texOffs(0, 48).addBox(-0.5F, -5.6F, -4.9F, 1.0F, 4.0F, 1.0F)
-				.texOffs(40, 0).addBox(-0.5F, -12.5F, -3.0F, 1.0F, 4.0F, 7.0F),
-			PartPose.ZERO);
-		root.getChild("right_arm").addOrReplaceChild("right_pauldron", CubeListBuilder.create()
-				.texOffs(0, 20).addBox(-4.0F, -2.8F, -3.0F, 5.0F, 3.0F, 6.0F, new CubeDeformation(0.1F)),
-			PartPose.ZERO);
-		root.getChild("left_arm").addOrReplaceChild("left_pauldron", CubeListBuilder.create()
-				.texOffs(0, 20).addBox(-1.0F, -2.8F, -3.0F, 5.0F, 3.0F, 6.0F, new CubeDeformation(0.1F)),
-			PartPose.ZERO);
-		root.getChild("body").addOrReplaceChild("cape", CubeListBuilder.create()
-				.texOffs(22, 32).addBox(-4.5F, 0.2F, 2.4F, 9.0F, 18.0F, 1.0F),
-			PartPose.ZERO);
-		return LayerDefinition.create(mesh, 64, 64);
+	private static float[] floats(JsonArray array) {
+		float[] values = new float[array.size()];
+		for (int i = 0; i < values.length; i++) {
+			values[i] = array.get(i).getAsFloat();
+		}
+		return values;
 	}
 }
