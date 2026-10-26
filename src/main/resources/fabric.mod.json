@@ -1,0 +1,25 @@
+{
+	"schemaVersion": 1,
+	"id": "hollow",
+	"version": "${version}",
+	"name": "Hollow",
+	"description": "A dark, grim-reaper themed Fabric utility client.",
+	"authors": ["Hollow"],
+	"license": "All-Rights-Reserved",
+	"environment": "client",
+	"icon": "assets/hollow/icon.png",
+	"accessWidener": "hollow.accesswidener",
+	"entrypoints": {
+		"client": ["dev.hollow.HollowClient"]
+	},
+	"mixins": ["hollow.mixins.json"],
+	"depends": {
+		"fabricloader": ">=0.17.3",
+		"minecraft": "~${minecraft_version}",
+		"java": ">=21",
+		"fabric-api": ">=0.141.0"
+	},
+	"breaks": {
+		"optifabric": "*"
+	}
+}
