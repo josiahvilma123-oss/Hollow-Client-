@@ -40,7 +40,7 @@ import org.lwjgl.glfw.GLFW;
 public final class HollowScreen extends Screen {
 	private static final int SIDEBAR_WIDTH = 138;
 	private static final int HEADER_HEIGHT = 30;
-	private static final int PAGE_HEADER_HEIGHT = 44;
+	private static final int PAGE_HEADER_HEIGHT = 54;
 	private static final int ENTRY_HEIGHT = 18;
 	private static String lastModuleId = "motion_blur";
 
@@ -352,12 +352,15 @@ public final class HollowScreen extends Screen {
 				boolean dimmed = !query.isEmpty() && matches == 0 && !module.matches(query);
 				int nameColor = dimmed ? Theme.TEXT_FAINT : isSelected ? Theme.TEXT : Colors.lerp(Theme.TEXT_DIM, Theme.TEXT, (float) h);
 				Draw2D.text(g, font, Draw2D.ellipsize(font, module.name(), SIDEBAR_WIDTH - 44), sx + 13, y + 4, ui.c(nameColor));
-				int dot = !module.isAvailable() ? Theme.DANGER : module.isEnabled() ? ui.accent : Theme.OFF;
 				int dotX = sx + SIDEBAR_WIDTH - 18;
-				if (module.isEnabled()) {
-					Draw2D.glow(g, dotX, y + 5, 4, 4, ui.c(Colors.withAlpha(ui.accent, 170)), 2, 1f);
+				// Status dot only for modules with an on/off state (or ones that failed to load).
+				if (module.isToggleable() || !module.isAvailable()) {
+					int dot = !module.isAvailable() ? Theme.DANGER : module.isEnabled() ? ui.accent : Theme.OFF;
+					if (module.isEnabled()) {
+						Draw2D.glow(g, dotX, y + 5, 4, 4, ui.c(Colors.withAlpha(ui.accent, 170)), 2, 1f);
+					}
+					Draw2D.panel(g, dotX, y + 5, 4, 4, ui.c(dot));
 				}
-				Draw2D.panel(g, dotX, y + 5, 4, 4, ui.c(dot));
 				if (matches > 0) {
 					String badge = Integer.toString(matches);
 					Draw2D.text(g, font, badge, dotX - 4 - font.width(badge), y + 4, ui.c(ui.accentLight));
@@ -451,7 +454,12 @@ public final class HollowScreen extends Screen {
 		int cw = contentWidth();
 		String subtitle = module.unavailableReason().map(r -> "Unavailable: " + r).orElse(module.description());
 		int subtitleColor = module.isAvailable() ? Theme.TEXT_DIM : Theme.DANGER;
-		Draw2D.text(g, font, Draw2D.ellipsize(font, subtitle, cw - 80), x, y + 18, ui.c(subtitleColor));
+		int lineY = y + 19;
+		List<net.minecraft.util.FormattedCharSequence> lines = font.split(net.minecraft.network.chat.FormattedText.of(subtitle), cw - 90);
+		for (int i = 0; i < Math.min(2, lines.size()); i++) {
+			g.drawString(font, lines.get(i), x, lineY, ui.c(subtitleColor), false);
+			lineY += 10;
+		}
 		if (module.isToggleable() && interactive) {
 			Toggle toggle = moduleToggles.computeIfAbsent(module, m -> new Toggle(m.isEnabled()));
 			int tx = contentX() + cw - 14 - Toggle.WIDTH;

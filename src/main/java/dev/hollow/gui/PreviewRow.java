@@ -42,8 +42,8 @@ final class PreviewRow extends Row {
 	int height(UiContext ui) {
 		return switch (module.id()) {
 			case "block_finder" -> 26 + legendHeight(ui);
-			case "hollow_alerts" -> 46;
-			case "server_rules" -> 52;
+			case "hollow_alerts" -> 54;
+			case "server_rules" -> 58;
 			default -> 70;
 		};
 	}
@@ -266,12 +266,14 @@ final class PreviewRow extends Row {
 		int ox = x + w / 2;
 		int oy = y + h / 2 + 4;
 		EntityCategory[] shown = {EntityCategory.HOSTILE, EntityCategory.PASSIVE, EntityCategory.NEUTRAL, EntityCategory.PLAYERS};
+		double radiusX = Math.max(30, w / 2.0 - 120);
+		double radiusY = h / 2.0 - 16;
 		for (int i = 0; i < shown.length; i++) {
 			EntityCategory category = shown[i];
 			EntityTracersModule.CategorySettings settings = tracers.category(category);
 			double a = seconds() * 0.25 + i * Math.PI / 2;
-			int tx = ox + (int) Math.round(Math.cos(a) * (w / 2.0 - 40));
-			int ty = oy + (int) Math.round(Math.sin(a) * (h / 2.0 - 14));
+			int tx = ox + (int) Math.round(Math.cos(a) * radiusX);
+			int ty = oy + (int) Math.round(Math.sin(a) * radiusY);
 			boolean visible = settings.show.get() && (category != EntityCategory.PLAYERS || players);
 			int color = visible ? settings.color.argb() : Theme.OFF;
 			if (visible && tracers.lines.get()) {
@@ -281,8 +283,10 @@ final class PreviewRow extends Row {
 			if (tracers.boxes.get() && visible) {
 				Draw2D.border(g, tx - 6, ty - 8, 12, 16, ui.c(color));
 			}
-			String label = category == EntityCategory.PLAYERS && !players ? "Players · not permitted here" : category.displayName();
-			Draw2D.text(g, ui.font, label, tx + 8, ty - 4, ui.c(visible ? Theme.TEXT : Theme.TEXT_FAINT));
+			String label = category == EntityCategory.PLAYERS && !players ? "Players (not permitted)" : category.displayName();
+			// Labels sit on the outer side of their marker so they never cross the tracer lines.
+			int labelX = tx >= ox ? tx + 9 : tx - 9 - ui.font.width(label);
+			Draw2D.text(g, ui.font, label, labelX, ty - 4, ui.c(visible ? Theme.TEXT : Theme.TEXT_FAINT));
 		}
 		g.fill(ox - 3, oy, ox + 4, oy + 1, ui.c(Theme.TEXT));
 		g.fill(ox, oy - 3, ox + 1, oy + 4, ui.c(Theme.TEXT));
@@ -290,7 +294,8 @@ final class PreviewRow extends Row {
 
 	private void alerts(GuiGraphics g, UiContext ui, int x, int y, int w) {
 		Alert sample = new Alert(AlertSource.BLOCKS, "Amethyst Cluster", "Detected", 12.4, "preview");
-		HudOverlay.drawSample(g, ui.font, sample, x + (w - HudOverlay.TOAST_WIDTH) / 2, y + 12, ui.alpha);
+		int toastWidth = HudOverlay.toastWidth(ui.font, sample, 1);
+		HudOverlay.drawSample(g, ui.font, sample, x + (w - toastWidth) / 2, y + 16, ui.alpha);
 	}
 
 	private void rules(GuiGraphics g, UiContext ui, int x, int y) {

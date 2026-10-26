@@ -121,19 +121,31 @@ public final class HandRenderHooks {
 		return true;
 	}
 
-	/** Records the held item's position in camera space while it swings. */
-	public static void captureTrail(PoseStack pose) {
-		if (!active || !module().trails.get()) {
+	private static boolean awaitingItemTransform;
+
+	/** Called just before a held item is submitted; the next item layer transform is sampled. */
+	public static void beforeHeldItem() {
+		awaitingItemTransform = active && currentSwinging && module().trails.get();
+	}
+
+	public static void afterHeldItem() {
+		awaitingItemTransform = false;
+	}
+
+	/**
+	 * Records the blade in camera space while it swings. Called right after the item model's
+	 * display transform, where the model occupies the unit cube and a handheld item's blade runs
+	 * diagonally from the lower-left (handle) to the upper-right (tip).
+	 */
+	public static void captureItemTransform(PoseStack pose) {
+		if (!awaitingItemTransform) {
 			return;
 		}
+		awaitingItemTransform = false;
 		TrailBuffer trail = currentMain ? MAIN_TRAIL : OFF_TRAIL;
-		if (!currentSwinging) {
-			return;
-		}
 		SCRATCH.set(RenderSystem.getModelViewStack()).mul(pose.last().pose());
-		float side = currentRight ? 1 : -1;
-		SCRATCH.transformPosition(NEAR.set(0.05f * side, 0.12f, -0.05f));
-		SCRATCH.transformPosition(FAR.set(0.25f * side, 0.62f, -0.32f));
+		SCRATCH.transformPosition(NEAR.set(0.55f, 0.55f, 0.5f));
+		SCRATCH.transformPosition(FAR.set(0.93f, 0.93f, 0.5f));
 		trail.add(module().animator().time(), NEAR.x, NEAR.y, NEAR.z, FAR.x, FAR.y, FAR.z);
 	}
 

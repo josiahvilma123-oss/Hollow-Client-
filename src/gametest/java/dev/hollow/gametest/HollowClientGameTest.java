@@ -107,8 +107,7 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			// Motion blur during a fast camera turn.
 			context.runOnClient(client -> {
 				MotionBlurModule blur = Hollow.module(MotionBlurModule.class);
-				blur.intensity.set(0.8);
-				blur.duration.set(160.0);
+				// Defaults (intensity 0.4, 80ms) at this test's low software-rendered frame rate.
 				Hollow.module(BlockFinderModule.class).setEnabled(false);
 				Hollow.module(EntityTracersModule.class).setEnabled(false);
 			});
@@ -165,9 +164,7 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 
 	private static void buildScene(TestSingleplayerContext world) {
 		String[] commands = {
-			"gamerule doDaylightCycle false",
-			"gamerule doWeatherCycle false",
-			"gamerule doMobSpawning false",
+			"gamerule send_command_feedback false",
 			"time set 18000",
 			"weather clear",
 			"fill -12 199 -4 12 199 24 minecraft:polished_blackstone",

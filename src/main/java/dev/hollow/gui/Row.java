@@ -3,9 +3,12 @@ package dev.hollow.gui;
 import dev.hollow.core.setting.Setting;
 import dev.hollow.render.Draw2D;
 import dev.hollow.render.Theme;
+import java.util.List;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.input.CharacterEvent;
 import net.minecraft.client.input.KeyEvent;
+import net.minecraft.network.chat.FormattedText;
+import net.minecraft.util.FormattedCharSequence;
 
 /** One line (or block) on a settings page. Positions are assigned by the page layout every frame. */
 abstract class Row {
@@ -59,11 +62,29 @@ abstract class Row {
 		return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height(ui);
 	}
 
-	/** Base height of a setting row: one line, plus one for the description when shown. */
-	protected int baseHeight(UiContext ui) {
+	private static final int MAX_DESCRIPTION_LINES = 3;
+	private List<FormattedCharSequence> wrapped = List.of();
+	private int wrappedWidth = -1;
+
+	/** Description wrapped to the row width, cached until the width changes. */
+	protected List<FormattedCharSequence> descriptionLines(UiContext ui) {
 		Setting<?> setting = setting();
-		boolean hasDescription = ui.descriptions && setting != null && !setting.description().isEmpty();
-		return hasDescription ? 28 : 18;
+		if (!ui.descriptions || setting == null || setting.description().isEmpty()) {
+			return List.of();
+		}
+		int available = width - PAD * 2;
+		if (available != wrappedWidth) {
+			wrappedWidth = available;
+			List<FormattedCharSequence> lines = ui.font.split(FormattedText.of(setting.description()), Math.max(40, available));
+			wrapped = lines.size() > MAX_DESCRIPTION_LINES ? lines.subList(0, MAX_DESCRIPTION_LINES) : lines;
+		}
+		return wrapped;
+	}
+
+	/** Base height of a setting row: the label line plus the wrapped description. */
+	protected int baseHeight(UiContext ui) {
+		int lines = descriptionLines(ui).size();
+		return lines == 0 ? 18 : 18 + lines * 10;
 	}
 
 	/** Draws the hover card, label and description shared by setting rows. */
@@ -77,8 +98,10 @@ abstract class Row {
 		Setting<?> setting = setting();
 		int textWidth = width - controlWidth - PAD * 3;
 		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, setting.name(), textWidth), x + PAD, y + 5, ui.c(Theme.TEXT));
-		if (ui.descriptions && !setting.description().isEmpty()) {
-			Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, setting.description(), width - PAD * 2), x + PAD, y + 16, ui.c(Theme.TEXT_FAINT));
+		int lineY = y + 16;
+		for (FormattedCharSequence line : descriptionLines(ui)) {
+			g.drawString(ui.font, line, x + PAD, lineY, ui.c(Theme.TEXT_FAINT), false);
+			lineY += 10;
 		}
 	}
 

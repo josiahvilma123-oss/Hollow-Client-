@@ -8,6 +8,7 @@ import dev.hollow.core.anim.Smooth;
 import dev.hollow.core.util.Colors;
 import dev.hollow.modules.HollowAlertsModule;
 import dev.hollow.modules.MotionBlurModule;
+import java.util.ArrayList;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,7 +21,8 @@ import org.joml.Matrix3x2fStack;
 /** Screen-space parts of Hollow: world labels and the alert toast stack. */
 public final class HudOverlay {
 	public static final HudOverlay INSTANCE = new HudOverlay();
-	public static final int TOAST_WIDTH = 196;
+	private static final int MIN_TOAST_WIDTH = 196;
+	private static final int MAX_TOAST_WIDTH = 300;
 	private static final int TOAST_HEIGHT = 30;
 	private static final int TOAST_GAP = 5;
 	private static final long ENTER_MILLIS = 260;
@@ -42,14 +44,35 @@ public final class HudOverlay {
 		Font font = minecraft.font;
 		int width = g.guiWidth();
 		int height = g.guiHeight();
-		// Farthest first so nearer labels end up on top.
-		for (int i = labels.size() - 1; i >= 0; i--) {
-			OverlayLabel label = labels.get(i);
+		// Place nearest labels first at their anchor; farther ones are nudged upward until they
+		// no longer overlap anything already placed, keeping dense scenes readable.
+		List<float[]> placed = new ArrayList<>();
+		List<PlacedLabel> draws = new ArrayList<>();
+		for (OverlayLabel label : labels) {
 			if (!ScreenProjector.INSTANCE.project(label.x(), label.y(), label.z(), width, height, projected)) {
 				continue;
 			}
-			drawLabel(g, font, label, projected[0], projected[1]);
+			float w = (labelWidth(font, label) + 8) * label.scale();
+			float h = 11 * label.scale();
+			float x = projected[0] - w / 2;
+			float y = projected[1] - h;
+			for (int attempt = 0; attempt < 8; attempt++) {
+				float[] hit = overlap(placed, x, y, w, h);
+				if (hit == null) {
+					break;
+				}
+				y = hit[1] - h - 1;
+			}
+			placed.add(new float[] {x, y, w, h});
+			draws.add(new PlacedLabel(label, projected[0], y + h));
 		}
+		for (int i = draws.size() - 1; i >= 0; i--) {
+			PlacedLabel draw = draws.get(i);
+			drawLabel(g, font, draw.label(), draw.centerX(), draw.bottom());
+		}
+	}
+
+	private record PlacedLabel(OverlayLabel label, float centerX, float bottom) {
 	}
 
 	private static void drawLabel(GuiGraphics g, Font font, OverlayLabel label, float x, float y) {
@@ -80,6 +103,21 @@ public final class HudOverlay {
 			Draw2D.text(g, font, detail, textX + titleWidth + gap, top + 2, Theme.TEXT_DIM);
 		}
 		pose.popMatrix();
+	}
+
+	private static float[] overlap(List<float[]> placed, float x, float y, float w, float h) {
+		for (float[] r : placed) {
+			if (x < r[0] + r[2] && x + w > r[0] && y < r[1] + r[3] && y + h > r[1]) {
+				return r;
+			}
+		}
+		return null;
+	}
+
+	private static int labelWidth(Font font, OverlayLabel label) {
+		int titleWidth = label.title().isEmpty() ? 0 : font.width(label.title());
+		int detailWidth = label.detail().isEmpty() ? 0 : font.width(label.detail());
+		return titleWidth + (titleWidth > 0 && detailWidth > 0 ? 5 : 0) + detailWidth;
 	}
 
 	public void renderAlerts(GuiGraphics g, DeltaTracker delta) {
@@ -121,10 +159,11 @@ public final class HudOverlay {
 			smooth.target(targetY);
 			double y = smooth.update(frameSeconds, 0.08);
 			double slide = (1 - visibility) * 26;
+			int toastWidth = toastWidth(font, toast.alert(), toast.count());
 			int baseX = switch (placement) {
 				case TOP_LEFT -> 8;
-				case TOP_CENTER -> (screenW - TOAST_WIDTH) / 2;
-				default -> screenW - TOAST_WIDTH - 8;
+				case TOP_CENTER -> (screenW - toastWidth) / 2;
+				default -> screenW - toastWidth - 8;
 			};
 			// Direction the toast slides in from: sideways for corner placements, from above when centered.
 			double dirX = switch (placement) {
@@ -149,6 +188,14 @@ public final class HudOverlay {
 		pose.popMatrix();
 	}
 
+	/** Width that fits the toast's text, within sensible bounds. */
+	public static int toastWidth(Font font, Alert alert, int count) {
+		String tag = alert.detail().isEmpty() ? alert.source().displayName().toUpperCase(java.util.Locale.ROOT) : alert.detail();
+		int header = 22 + Draw2D.spacedWidth(font, Alert.PREFIX, 1) + 12 + font.width(tag) + (count > 1 ? font.width("×" + count) + 10 : 0) + 6;
+		int body = 22 + font.width(alert.body()) + 8;
+		return Math.max(MIN_TOAST_WIDTH, Math.min(MAX_TOAST_WIDTH, Math.max(header, body)));
+	}
+
 	/** Draws a static example toast, used by the settings preview. */
 	public static void drawSample(GuiGraphics g, Font font, Alert alert, int x, int y, float alpha) {
 		drawToast(g, font, alert, 1, x, y, alpha, true);
@@ -163,7 +210,7 @@ public final class HudOverlay {
 		pose.pushMatrix();
 		pose.translate((float) x, (float) y);
 		int accent = Theme.accent();
-		int w = TOAST_WIDTH;
+		int w = toastWidth(font, alert, count);
 		int h = TOAST_HEIGHT;
 		if (full) {
 			Draw2D.glow(g, 0, 0, w, h, Colors.fade(accent, alpha), 4, 0.9f);
@@ -184,7 +231,8 @@ public final class HudOverlay {
 				Draw2D.text(g, font, chip, rightX - chipW + 3, 4, Colors.fade(Theme.TEXT, alpha));
 				rightX -= chipW + 4;
 			}
-			String tag = Draw2D.ellipsize(font, detail.isEmpty() ? source : detail, Math.max(10, rightX - 100));
+			int prefixEnd = 22 + Draw2D.spacedWidth(font, Alert.PREFIX, 1) + 10;
+			String tag = Draw2D.ellipsize(font, detail.isEmpty() ? source : detail, Math.max(10, rightX - prefixEnd));
 			Draw2D.text(g, font, tag, rightX - font.width(tag), 5, Colors.fade(Theme.TEXT_FAINT, alpha));
 			String body = Draw2D.ellipsize(font, alert.body(), w - 28);
 			Draw2D.text(g, font, body, 22, 17, Colors.fade(Theme.TEXT, alpha));

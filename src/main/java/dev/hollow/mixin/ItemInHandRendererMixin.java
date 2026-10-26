@@ -53,7 +53,11 @@ abstract class ItemInHandRendererMixin {
 		target = "Lnet/minecraft/client/renderer/ItemInHandRenderer;renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V"))
 	private void hollow$renderItem(ItemInHandRenderer self, LivingEntity entity, ItemStack stack, ItemDisplayContext context, PoseStack poseStack,
 			SubmitNodeCollector collector, int light, Operation<Void> original) {
-		HandRenderHooks.captureTrail(poseStack);
-		original.call(self, entity, stack, context, poseStack, collector, light);
+		HandRenderHooks.beforeHeldItem();
+		try {
+			original.call(self, entity, stack, context, poseStack, collector, light);
+		} finally {
+			HandRenderHooks.afterHeldItem();
+		}
 	}
 }

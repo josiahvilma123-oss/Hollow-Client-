@@ -7,6 +7,7 @@
 		"ClientLevelMixin",
 		"GameRendererMixin",
 		"ItemInHandRendererMixin",
+		"ItemLayerRenderStateMixin",
 		"LevelRendererMixin",
 		"LivingEntityAccessor"
 	],
