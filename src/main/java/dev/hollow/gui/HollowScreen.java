@@ -110,7 +110,10 @@ public final class HollowScreen extends Screen {
 		if (moduleWindow != null && moduleWindow.module == module) {
 			return;
 		}
-		float w = Math.min(380, width - 32);
+		float besideColumn = 16 + CategoryWindow.WIDTH + 16;
+		float roomBeside = width - besideColumn - 8;
+		// Prefer sitting beside the category column; shrink to fit there on small screens.
+		float w = roomBeside >= 260 ? Math.min(380, roomBeside) : Math.min(380, width - 32);
 		float h = Math.min(height - BAR_HEIGHT - 32, 360);
 		float x;
 		float y;
@@ -121,7 +124,6 @@ public final class HollowScreen extends Screen {
 			closingWindows.add(moduleWindow);
 		} else {
 			int[] saved = Hollow.module(InterfaceModule.class).windowPosition(SETTINGS_WINDOW_ID);
-			float besideColumn = 16 + CategoryWindow.WIDTH + 16;
 			x = saved != null ? saved[0] : besideColumn + w <= width - 8 ? besideColumn : (width - w) / 2f;
 			y = saved != null ? saved[1] : BAR_HEIGHT + 24;
 		}
