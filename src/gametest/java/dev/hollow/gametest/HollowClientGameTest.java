@@ -28,11 +28,15 @@ import net.minecraft.world.InteractionHand;
 public final class HollowClientGameTest implements FabricClientGameTest {
 	@Override
 	public void runTest(ClientGameTestContext context) {
-		// Keep CPU-only (software OpenGL) CI machines fast enough to load the world in time.
+		// Keep CPU-only (software OpenGL) CI machines fast enough to load the world in time: the
+		// test harness ticks the server in lockstep with client frames, and vanilla's menu blur
+		// dominates frame time under llvmpipe.
+		context.getInput().resizeWindow(960, 540);
 		context.runOnClient(client -> {
 			client.options.renderDistance().set(2);
 			client.options.simulationDistance().set(5);
 			client.options.framerateLimit().set(30);
+			client.options.menuBackgroundBlurriness().set(0);
 		});
 		try (TestSingleplayerContext world = context.worldBuilder()
 				.adjustSettings(creator -> creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE))
