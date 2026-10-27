@@ -48,4 +48,16 @@ final class EnumRow extends Row {
 		flash = 1;
 		return true;
 	}
+
+	@Override
+	boolean activate() {
+		return adjust(1);
+	}
+
+	@Override
+	boolean adjust(int direction) {
+		setting.cycle(direction);
+		flash = 1;
+		return true;
+	}
 }

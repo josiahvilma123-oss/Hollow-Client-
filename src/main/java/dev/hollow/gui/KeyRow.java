@@ -116,4 +116,10 @@ final class KeyRow extends Row {
 		}
 		return true;
 	}
+
+	@Override
+	boolean activate() {
+		listening = true;
+		return true;
+	}
 }

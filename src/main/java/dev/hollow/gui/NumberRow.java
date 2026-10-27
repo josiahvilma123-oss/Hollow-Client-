@@ -89,4 +89,10 @@ final class NumberRow extends Row {
 	private void update(double mouseX) {
 		setting.setFraction((mouseX - barX()) / BAR_WIDTH);
 	}
+
+	@Override
+	boolean adjust(int direction) {
+		nudge(direction);
+		return true;
+	}
 }

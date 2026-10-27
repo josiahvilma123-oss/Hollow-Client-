@@ -42,7 +42,7 @@ import dev.hollow.core.util.Clock;
 import dev.hollow.detection.BlockResults;
 import dev.hollow.detection.BlockScanner;
 import dev.hollow.detection.EntityTracker;
-import dev.hollow.gui.HollowScreen;
+import dev.hollow.gui.HoloScreen;
 import dev.hollow.menu.MenuScene;
 import dev.hollow.modules.BlockEspModule;
 import dev.hollow.modules.BlockFinderModule;
@@ -202,7 +202,7 @@ public final class HollowClient implements ClientModInitializer {
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openMenuKey.consumeClick()) {
 				if (client.screen == null) {
-					client.setScreen(new HollowScreen(null));
+					client.setScreen(new HoloScreen(null));
 				}
 			}
 			keybinds.tick(client);

@@ -50,7 +50,7 @@ public final class WaypointsModule extends Module implements Tickable {
 	public final NumberSetting labelRange = add("Display", new NumberSetting("label_range", "Label Range",
 		"Labels and beams show for waypoints closer than this.", 2000, 50, 30000, 50).unit(" blocks"));
 	public final BoolSetting compass = add("Display", new BoolSetting("compass", "Compass HUD",
-		"A heading strip with waypoint markers (move it in the HUD editor).", true));
+		"A heading strip with waypoint markers, shown while this dimension has a visible waypoint (move it in the HUD editor).", true));
 
 	public final BoolSetting deathPoints = add("Automatic", new BoolSetting("death_points", "Death Waypoints",
 		"Save a waypoint where you die.", true));

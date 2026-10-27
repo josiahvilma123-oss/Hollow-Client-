@@ -56,4 +56,10 @@ final class HeaderRow extends Row {
 		COLLAPSED.put(key, !collapsed());
 		return true;
 	}
+
+	@Override
+	boolean activate() {
+		COLLAPSED.put(key, !collapsed());
+		return true;
+	}
 }

@@ -4,7 +4,7 @@ import dev.hollow.Hollow;
 import dev.hollow.core.util.Colors;
 import dev.hollow.modules.InterfaceModule;
 
-/** Hollow's black-and-purple palette. The accent follows the Interface module's setting. */
+/** Holo's dark violet palette. The accent and detail colors follow the Interface module's theme. */
 public final class Theme {
 	public static final int VOID = 0xFF07060A;
 	public static final int BACKGROUND = 0xFF0C0A10;
@@ -19,6 +19,8 @@ public final class Theme {
 	public static final int OFF = 0xFF3A3244;
 	public static final int DANGER = 0xFFE0405E;
 	public static final int DEFAULT_ACCENT = 0xFF9D4EDD;
+	public static final int DEFAULT_DETAIL = 0xFFE6B54A;
+	public static final int WARNING = 0xFFE8A03A;
 
 	private Theme() {
 	}
@@ -28,6 +30,15 @@ public final class Theme {
 			return Hollow.module(InterfaceModule.class).accent.argb();
 		} catch (RuntimeException e) {
 			return DEFAULT_ACCENT;
+		}
+	}
+
+	/** The ornament color (gold by default): wordmark, focus outlines and guides. */
+	public static int detail() {
+		try {
+			return Hollow.module(InterfaceModule.class).detail.argb();
+		} catch (RuntimeException e) {
+			return DEFAULT_DETAIL;
 		}
 	}
 

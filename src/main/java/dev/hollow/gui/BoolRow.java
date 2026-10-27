@@ -34,4 +34,16 @@ final class BoolRow extends Row {
 		setting.toggle();
 		return true;
 	}
+
+	@Override
+	boolean activate() {
+		setting.toggle();
+		return true;
+	}
+
+	@Override
+	boolean adjust(int direction) {
+		setting.set(direction > 0);
+		return true;
+	}
 }

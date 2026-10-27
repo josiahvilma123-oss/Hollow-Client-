@@ -35,4 +35,13 @@ class ServerPolicyTest {
 		assertFalse(ServerPolicy.matchesAny("10.0.0.5:25570", List.of("10.0.0.5")));
 		assertTrue(ServerPolicy.matchesAny("10.0.0.5", List.of("10.0.0.5:25565")));
 	}
+
+	@Test
+	void automationNeedsSingleplayerOrAnExplicitlyPermittedServer() {
+		assertTrue(ServerPolicy.automationAllowed(true, "", List.of(), List.of()));
+		assertFalse(ServerPolicy.automationAllowed(false, "play.example.net", List.of(), List.of()), "off by default on servers");
+		assertTrue(ServerPolicy.automationAllowed(false, "localhost:25570", List.of(), List.of("localhost:25570")));
+		assertFalse(ServerPolicy.automationAllowed(false, "mc.strict.org", List.of("*.strict.org"), List.of("mc.strict.org")),
+			"restricted servers always win");
+	}
 }

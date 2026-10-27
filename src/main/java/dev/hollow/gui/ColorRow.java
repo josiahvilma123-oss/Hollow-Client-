@@ -258,4 +258,15 @@ final class ColorRow extends Row {
 		}
 	}
 
+
+	@Override
+	boolean activate() {
+		open = !open;
+		if (open) {
+			syncFromSetting();
+		} else {
+			hex.focus(false);
+		}
+		return true;
+	}
 }

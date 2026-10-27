@@ -185,4 +185,45 @@ class ConfigManagerTest {
 		assertEquals("FOLLOW_STUDIO", kept.get("character").getAsString());
 		assertFalse(kept.has("featured_character"));
 	}
+
+	@Test
+	void migratesPerformanceProfileToPreset() {
+		JsonObject v3 = JsonParser.parseString("""
+			{"version":3,"modules":{"performance":{"enabled":true,"settings":{"profile":"QUALITY"}},
+			 "motion_blur":{"enabled":true,"settings":{"keybind":71}}}}
+			""").getAsJsonObject();
+		JsonObject migrated = ConfigMigrations.migrate(v3, 3, log::add);
+		JsonObject performance = migrated.getAsJsonObject("modules").getAsJsonObject("performance").getAsJsonObject("settings");
+		assertEquals("HIGH_QUALITY", performance.get("preset").getAsString());
+		assertFalse(performance.has("profile"));
+		assertEquals(71, migrated.getAsJsonObject("modules").getAsJsonObject("motion_blur").getAsJsonObject("settings").get("keybind").getAsInt(),
+			"unrelated settings, including keybinds, are untouched");
+		assertEquals(4, migrated.get("version").getAsInt());
+		for (String old : List.of("LOW", "BALANCED")) {
+			JsonObject root = JsonParser.parseString("{\"modules\":{\"performance\":{\"settings\":{\"profile\":\"" + old + "\"}}}}")
+				.getAsJsonObject();
+			assertEquals(old, ConfigMigrations.migrate(root, 3, log::add).getAsJsonObject("modules").getAsJsonObject("performance")
+				.getAsJsonObject("settings").get("preset").getAsString());
+		}
+	}
+
+	@Test
+	void interfaceThemesSetColorsAndCustomColorsSwitchToCustom(@TempDir Path dir) throws IOException {
+		dev.hollow.modules.InterfaceModule ui = new dev.hollow.modules.InterfaceModule();
+		ui.theme.set(dev.hollow.modules.InterfaceModule.ThemePreset.CRIMSON);
+		assertEquals(dev.hollow.modules.InterfaceModule.ThemePreset.CRIMSON.accent(), ui.accent.get());
+		ui.accent.set(0xFF123456);
+		assertEquals(dev.hollow.modules.InterfaceModule.ThemePreset.CUSTOM, ui.theme.get());
+
+		// A pre-1.3 config with a hand-picked accent and no theme keeps that accent as a Custom theme.
+		Path file = dir.resolve("hollow.json");
+		Files.writeString(file, """
+			{"version":3,"modules":{"interface":{"enabled":true,"settings":{"accent":"#FF2FBF71","panel_opacity":0.9}}}}
+			""");
+		ModuleManager modules = new ModuleManager();
+		dev.hollow.modules.InterfaceModule loaded = modules.register(new dev.hollow.modules.InterfaceModule());
+		new ConfigManager(file, modules, () -> 0, 0, log::add).load();
+		assertEquals(0xFF2FBF71, loaded.accent.get());
+		assertEquals(dev.hollow.modules.InterfaceModule.ThemePreset.CUSTOM, loaded.theme.get());
+	}
 }

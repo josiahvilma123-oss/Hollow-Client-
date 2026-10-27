@@ -14,6 +14,8 @@ final class ActionBarRow extends Row {
 	private static final int GAP = 4;
 	private final ActionBarSetting setting;
 	private final double[] pressed;
+	/** Button chosen with the arrow keys while the row has keyboard focus. */
+	private int selected;
 
 	ActionBarRow(ActionBarSetting setting) {
 		this.setting = setting;
@@ -69,7 +71,8 @@ final class ActionBarRow extends Row {
 				Draw2D.glow(g, cx, cy, w, BUTTON_HEIGHT, BUTTON_HEIGHT / 2f, ui.c(Colors.withAlpha(ui.accent, 110)), 3, 1f);
 			}
 			Draw2D.rounded(g, cx, cy, w, BUTTON_HEIGHT, BUTTON_HEIGHT / 2f, ui.c(fill));
-			Draw2D.roundedBorder(g, cx, cy, w, BUTTON_HEIGHT, BUTTON_HEIGHT / 2f, 1, ui.c(hovered ? ui.accent : Theme.BORDER));
+			int border = keyboardFocus && i == selected ? ui.detail : hovered ? ui.accent : Theme.BORDER;
+			Draw2D.roundedBorder(g, cx, cy, w, BUTTON_HEIGHT, BUTTON_HEIGHT / 2f, 1, ui.c(border));
 			Draw2D.centered(g, ui.font, button.label(), cx + w / 2, cy + 4, ui.c(Theme.TEXT));
 			cx += w + GAP;
 		}
@@ -97,5 +100,19 @@ final class ActionBarRow extends Row {
 			cx += w + GAP;
 		}
 		return false;
+	}
+
+	@Override
+	boolean adjust(int direction) {
+		int count = setting.buttons().size();
+		selected = ((selected + direction) % count + count) % count;
+		return true;
+	}
+
+	@Override
+	boolean activate() {
+		pressed[selected] = 1;
+		setting.buttons().get(selected).action().run();
+		return true;
 	}
 }

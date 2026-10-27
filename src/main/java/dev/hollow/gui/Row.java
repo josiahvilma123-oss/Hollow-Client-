@@ -17,6 +17,8 @@ abstract class Row {
 	int y;
 	int width;
 	double hover;
+	/** Set by the page while keyboard navigation rests on this row. */
+	boolean keyboardFocus;
 	/** Context of the last layout pass; available to input handlers. */
 	UiContext ui;
 
@@ -55,6 +57,33 @@ abstract class Row {
 
 	/** Drops keyboard focus; returns true if something was cancelled. */
 	boolean cancelInput() {
+		return false;
+	}
+
+	/** Whether the row is shown at all (hidden settings stay out of the page). */
+	boolean visible() {
+		Setting<?> setting = setting();
+		return setting == null || setting.isVisible();
+	}
+
+	/** Whether the row matches a lower-case search query. */
+	boolean matches(String query) {
+		Setting<?> setting = setting();
+		return setting == null || setting.matches(query);
+	}
+
+	/** Whether keyboard navigation can rest on this row. */
+	boolean focusable() {
+		return true;
+	}
+
+	/** Enter / Space while focused. Returns true if something happened. */
+	boolean activate() {
+		return false;
+	}
+
+	/** Left / Right while focused. */
+	boolean adjust(int direction) {
 		return false;
 	}
 
@@ -97,12 +126,27 @@ abstract class Row {
 		}
 		Setting<?> setting = setting();
 		int textWidth = width - controlWidth - PAD * 3;
-		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, setting.name(), textWidth), x + PAD, y + 5, ui.c(Theme.TEXT));
+		String label = Draw2D.ellipsize(ui.font, setting.name(), textWidth - 12);
+		Draw2D.text(g, ui.font, label, x + PAD, y + 5, ui.c(Theme.TEXT));
+		// Changed settings get a reset arrow next to their name, visible on hover or keyboard focus.
+		resetIconX = -1;
+		if (setting.persistent() && !setting.isDefault() && (hover > 0.3 || keyboardFocus)) {
+			resetIconX = x + PAD + ui.font.width(label) + 4;
+			boolean overIcon = over(mouseX, mouseY, resetIconX - 2, y + 2, 12, 12);
+			Icons.draw(g, Icons.Icon.RESET, resetIconX + 4, y + 9, 3.5f, ui.c(overIcon ? ui.detail : Theme.TEXT_FAINT));
+		}
 		int lineY = y + 16;
 		for (FormattedCharSequence line : descriptionLines(ui)) {
 			g.drawString(ui.font, line, x + PAD, lineY, ui.c(Theme.TEXT_FAINT), false);
 			lineY += 10;
 		}
+	}
+
+	private int resetIconX = -1;
+
+	/** Whether the click lands on the reset arrow drawn by {@link #renderLabel}. */
+	boolean overResetIcon(double mouseX, double mouseY) {
+		return resetIconX >= 0 && over(mouseX, mouseY, resetIconX - 2, y + 2, 12, 12);
 	}
 
 	protected boolean over(double mouseX, double mouseY, int rx, int ry, int rw, int rh) {

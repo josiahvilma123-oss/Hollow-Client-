@@ -2,12 +2,15 @@
 
 A dark-fantasy Fabric client for **Minecraft 1.21.11** (formerly *Hollow*). It includes:
 
+- Practice-friendly combat and aim tools, bridging help and a free camera.
+- Waypoints and bases, a world scanner, and visibility diagnostics.
+- Performance presets, FPS Boost, adaptive quality and a performance monitor.
 - Restrained motion blur and fluid first-person hand animations.
 - Configurable block detection, entity tracers and a unified alert system.
-- Original custom skies, client-side character cosmetics and coordinated theme packs.
+- Original custom skies, client-side 3D character outfits and coordinated theme packs.
 - An animated Egyptian-themed main menu and loading screen.
 
-Everything lives in a black-and-purple module browser.
+Everything lives in one dark violet-and-gold menu with a category sidebar, module cards, keybinds, profiles and a HUD editor.
 
 Open the menu with **Right Shift** (rebind under *Controls → Holo*), or use *Client Settings* on the title screen.
 
@@ -26,149 +29,86 @@ Install: build the jar (see below) or take `build/libs/hollow-<version>.jar`, th
 
 ## Features
 
-### Visuals & Detection
+Modules are grouped by sidebar category. *Automated* means the module acts for you; those only run where automation is allowed (see [Fair-play boundaries](#fair-play-boundaries)).
+
+### Combat
 
 | Module | What it does |
 |---|---|
-| **Motion Blur** | Frame-accumulation blur that only appears during fast camera turns, plus soft motion trails on Hollow's own panels, pages and toasts. Intensity, duration and sensitivity are separate for the camera and the GUI. The pass runs *before* the HUD, so text, crosshair, chat and menus are never blurred. Pauses automatically while an Iris shader pack is active. |
-| **Hollow Hands** | Re-timed swing and attack animations with configurable speed, arc intensity and easing curve, walk bob synced to the game's own step phase, sprint lean, idle sway, smooth blending between idle/walk/sprint, equip styles (smooth dip, side slide, instant), softened transitions into and out of eating/blocking/drawing, adjustable position, scale and rotation, and optional purple swing trails. Presets: **Subtle**, **Smooth**, **Stylized**. Attack timing and gameplay are untouched: only the drawing changes. |
-| **Block Finder** | Scans chunks the client already has loaded for the selected blocks: amethyst clusters, large, medium and small buds, and budding amethyst (each separately), every ore, ancient debris, chests (including copper chests), barrels, ender chests, shulker boxes, spawners, vaults, plus any block or `#tag` you add. Each category has its own color, range, tracer and alert toggle. Whitelist and blacklist are supported. Work is spread over ticks, sections without targets are skipped via the palette, and single-block updates are applied incrementally. |
-| **Block ESP** | Draws Block Finder results as outlines, fills or both, optionally through walls, with distance fade, tracers, labels, and **vein merging** (touching ores become one box, e.g. `Diamond Ore ×6`). Per-category and total limits keep the screen clean. Turn it off to use Block Finder as alerts-only. |
-| **Entity Tracers** | Lines, hitbox outlines and labels (name, health, distance) for hostile mobs, passive mobs and animals, villagers and neutral mobs, players where permitted, and a custom id filter. Each category has its own color and approach alert. Thickness, opacity, target point and range are adjustable. |
-| **Hollow Alerts** | One notification system for every detector, for example `HOLLOW ALERT — Amethyst Cluster Detected · 12.4m`. Toasts slide in with a purple glow and merge repeats into a count (`×3`) instead of spamming. Each source (blocks, hostile, passive, neutral, players) has its own toggle, sound and cooldown. Optional chat echo, five sounds, and a preview button. |
+| **Kill Aura** *(automated)* | Attacks eligible targets with ordinary attacks. Range is capped at your real reach and it waits for your attack charge. It can turn your camera smoothly to the target. Also: field of view, target filters and priority, sword/axe-only mode, a pause while using items, a target outline and a status HUD. |
+| **Trigger Bot** *(automated)* | Attacks when your crosshair rests on an eligible target, after a configurable reaction delay and attack charge. |
+| **Reach Display** | Visual only. Shows the distance to what you aim at against your real entity and block reach, with optional range rings on the ground. |
+| **Knockback Tester** | Measures the knockback you take (speed and distance). In single-player it can also set your knockback resistance and give you a test hit. No packet changes. |
 
-### Studio
+### Aim Assist
 
 | Module | What it does |
 |---|---|
-| **Holo Sky Studio** | Replaces the overworld sky with a layered procedural sky. Layers: gradient and horizon glow, optional resource-pack texture, nebula, two star layers, planets with rings, sun and moon styles (disc, halo, crescent, eclipse), an ornamental celestial ring, and horizon silhouettes. Ships seven original presets: Anubis Eclipse, Void Realm, Pharaoh's Night, Astral Horizon, Crimson Dusk, Frozen Cosmos and Vanilla Enhanced. The library has search, Save, Save As, Rename, Duplicate, Delete, Revert, Export, Import and *Restore Vanilla Sky*. Simple mode shows the essentials; *Advanced Controls* shows every parameter. Off by default. |
-| **Character Studio** | Eight original 3D outfits worn on your own skin: Grim Reaper, Shadow Ninja, Frost Witch, Infernal Demon, Star Voyager, Pharaoh, Wraith and Hollow Knight. They show in third person, the inventory and the menus. The studio page has a large 3D figure you can drag to turn, and a 3D gallery where one click wears an outfit. Client-side only: nobody else sees them and nothing is sent to servers. |
-| **Theme Packs** | Eight collections (Pharaoh, Wraith, Hollow Knight, Reaper, Shadow, Frost, Infernal, Voyager). Each bundles a sky, outfit, interface accent, hand-animation preset with trail color, and menu scene. Apply only the ticked components, or the whole collection. Applying a sky never changes your character or interface, and the reverse holds too. |
+| **Aim Assist** *(automated)* | Smooth assistance that adds to your own aiming. It is frame-rate independent with a speed limit, so it never snaps, and by default it only acts while you move the mouse.<br>• **Presets:** Subtle, Smooth, Standard and Custom.<br>• **Tuning:** strength, smoothness, speed limit, sensitivity matching, horizontal and vertical multipliers, field of view, range, aim point (closest, body, head), target filters and priority.<br>• **Activation:** always, while attacking, hold key or toggle key.<br>• **Display:** a target marker and a status HUD.<br>• **Practice mode** (single-player): spawns practice targets and counts hits and accuracy.<br>• It stops in menus, chat and text fields, and when the window is unfocused. |
 
-### Client
+### Bridging
 
 | Module | What it does |
 |---|---|
-| **Main Menu** | The Holo title screen. Scenes: Temple of Anubis, Pyramids at Night, Void Realm, your Sky Studio sky, or a custom PNG from `config/hollow/backgrounds/`. It adds a live 3D figure of you in your outfit (or any character) that looks towards the mouse, particles, and a glowing logo with a celestial ring. It keeps every vanilla entry (Singleplayer, Multiplayer, Realms, Options, Language, Accessibility, Quit, Credits) and adds Character Studio, Sky Studio and Client Settings. Other out-of-world menus share its backdrop. *Vanilla Menu* or turning the module off restores Minecraft's own title screen. |
-| **Loading Screen** | Restyles Minecraft's loading overlay with a logo reveal and a ring that fills with the **real** reload progress, plus a status line, particles and a comet trail. Offers reduced motion, a speed setting, and *Skip Fade-Out* for a quick hand-off to the menu. It never delays loading. |
-| **Performance** | Quality, Balanced and Low Performance profiles that scale sky detail, menu and loading effects, motion blur and swing trails. |
-| **Interface** | Accent color, panel opacity, backdrop dim, descriptions, animation speed. |
-| **Server Rules** | Lists of servers where detection must stay off, and servers where player detection is permitted. |
+| **Auto Bridge** *(automated)* | Places blocks under you as you walk off an edge, always against a real neighbouring face, and never mid-jump or while flying. It has a placement delay, place-ahead, hotbar selection, sneak at edges, a preview and a block counter. It stops by itself when you run out of blocks. |
+| **Speed Bridge** | Crouch-and-place timing help.<br>• **Safe:** holds sneak at edges.<br>• **Rhythm:** a visual and audio cue tells you when to place.<br>• **Practice:** adds statistics (blocks per second, longest bridge, falls).<br>Also: edge indicator, preview and optional automatic placement *(automated)*. |
 
-## Fair-play boundaries
+### Movement
 
-- Detection only reads data the client already has. Chunks are looked up with `getChunk(..., false)`, which returns nothing for unloaded chunks and never requests them.
-- Entity tracking uses the client's render list, and skips invisible entities and spectators.
-- **Player detection is off on every multiplayer server** unless you add that server under *Server Rules → Servers Allowing Player Detection*. Single-player always allows it.
-- Servers listed under *Restricted Servers* (wildcards like `*.example.net` work) turn off Block Finder, Block ESP and Entity Tracers entirely.
-- Many servers forbid ESP, tracers or ore finders. Check the rules before using them online.
-
-## Using the menu
-
-The menu is a click GUI: floating, rounded category windows over the game, in the style of Meteor.
-
-- **Left-click** a module to toggle it. **Right-click** it to open its settings window. Always-on modules open their settings on any click.
-- **Drag** a window's header to move it. Click or right-click a header to collapse it. Positions are remembered; *Interface → Reset Window Layout* restores them.
-- Hovering a module shows its description.
-- The settings window can be dragged by its title bar. It has an on/off switch, a close button and a live preview at the top.
-- Type anywhere to search. With no settings window open, the category windows filter to matching modules and show match counts. With one open, its settings are filtered instead. `Ctrl+F` focuses the search box and `Esc` clears it.
-- Sliders: drag, **right-click to reset**, or `Shift` + scroll for single steps.
-- Enum pickers: left-click for next, right-click for previous.
-- Colors: click the swatch for an HSV picker with alpha and hex entry. Right-click the swatch to reset.
-- Keybinds: click, then press a key. `Backspace` unbinds.
-- Section headers collapse. Block Finder's categories start collapsed.
-- `Esc` closes the settings window first, then the menu. Right Shift also closes the menu.
-
-Settings save automatically to `config/hollow/hollow.json`, debounced and written atomically. A damaged file is moved to `hollow.json.broken` and defaults are restored. When the format changes, the old file is migrated in place and a copy is kept (for example `hollow.json.v1.bak`). Existing settings and keybinds carry over.
-
-Other files:
-
-| Path | Contents |
+| Module | What it does |
 |---|---|
-| `config/hollow/skies/*.json` | Your custom sky presets. One file per preset, format `holo-sky` v1. |
-| `config/hollow/skies/exports/` | Skies written by *Export*. The same JSON is also copied to the clipboard. |
-| `config/hollow/backgrounds/` | PNGs for the *Custom Image* menu scene (16–4096 px per side). |
+| **Safe Walk** *(automated)* | You never walk off an edge by accident, without sneaking's slowdown. |
 
-Sky textures for the *Texture Layer* come from resource packs. Use an equirectangular PNG and give its id, for example `hollow:textures/sky/aurora_veil.png`. Missing or invalid textures are skipped with one warning in the log.
+### Render
 
-## Compatibility
-
-- **Holo Sky Studio:**
-  - It only replaces the **overworld** sky. The Nether, the End and modded dimensions with their own sky effects are left alone, and changing dimension switches automatically.
-  - It stands aside while an Iris shader pack is active, and when the camera is in water or lava the fog is not tinted.
-  - If the sky pass fails (for example a driver error), Sky Studio turns itself off, the vanilla sky returns, and the error is logged.
-- **Main menu:**
-  - Only Minecraft's own `TitleScreen` class is replaced. Mods that subclass or replace the title screen keep theirs.
-  - Demo mode always uses vanilla's menu. A rendering error restores the vanilla title screen and turns the module off.
-- **Loading screen:** only the drawing of Minecraft's overlay changes; its completion logic does not. Mods that replace the overlay entirely simply take precedence.
-- **Resource reloads, disconnects and shutdown:**
-  - Sky textures are re-resolved after every resource reload.
-  - Menu textures are freed when you join a world.
-  - Sky GPU buffers are freed when Sky Studio is turned off.
-  - Settings are saved on shutdown.
-- **Missing hooks:** if another mod replaces the game renderer or first-person rendering so that Hollow's hook never runs, the affected module disables itself and shows why in the menu, rather than failing silently. Mixin injections are optional (`defaultRequire: 0`), so an incompatible renderer cannot crash the game.
-- **Iris:** camera blur pauses while a shader pack is active. This can be toggled under *Motion Blur → Compatibility*.
-- **Sodium:** Block Finder and the overlays use their own render hooks and work alongside Sodium.
-- **Restoring vanilla:** disabling a module restores vanilla rendering. Hook code passes straight through when its module is off, and motion blur frees its GPU buffers.
-
-### Mixins
-
-All injections are optional (`defaultRequire: 0`) and pass straight through when their module is off.
-
-| Mixin | Target | Purpose |
-|---|---|---|
-| `GameRendererMixin` | `GameRenderer.render` | Runs the motion blur pass before the HUD. |
-| `LevelRendererMixin` | `LevelRenderer.renderLevel` | Captures the view and projection so HUD labels line up with world overlays. |
-| `ClientLevelMixin` | `ClientLevel.sendBlockUpdated` | Incremental Block Finder updates. |
-| `ItemInHandRendererMixin` | `ItemInHandRenderer` | Hollow Hands animation. |
-| `ItemLayerRenderStateMixin` | `ItemStackRenderState.LayerRenderState.submit` | Samples the held item's position for swing trails. |
-| `LivingEntityAccessor` | `LivingEntity` | Reads the current swing duration for hand animation timing. |
-| `SkyRendererMixin` | `SkyRenderer` | Captures sky state; replaces the overworld sky when Sky Studio is on. |
-| `FogRendererMixin` | `FogRenderer.computeFogColor` | Optional fog tint toward the sky's horizon. |
-| `CloudRendererMixin` | `CloudRenderer.render` | Hides or tints clouds. |
-| `MinecraftMixin` | `Minecraft.setScreen` | Swaps vanilla's title screen for the Holo one. |
-| `ScreenMixin` | `Screen.renderPanorama` | Draws the Holo backdrop behind other out-of-world menus. |
-| `LoadingOverlayMixin` | `LoadingOverlay.render` / `tick` | Restyles the loading overlay; optional quick hand-off. |
-
-Holo's own shader pipelines are not registered as required pipelines. They compile on first use, so a graphics driver that rejects one only turns off that effect; it can never stop the game from loading.
-
-Character outfits use Fabric API's `EntityModelLayerRegistry` and `LivingEntityFeatureRendererRegistrationCallback`; the 3D figures in menus use its `SpecialGuiElementRegistry`. No mixin is involved.
-
-### Adding a character
-
-1. Add a function to `tools/characters.py` describing its pieces and paint, call it at the bottom, and run `python3 tools/characters.py`.
-2. Add an entry to the `Cosmetic` enum with the same id. Its view height should cover hats and horns.
-
-It then appears in Character Studio, the menu options and the in-game layer.
-
-## Performance
-
-Sky Studio is a single full-screen shader pass that replaces vanilla's sky draws. Menu and loading animations allocate nothing per frame and only advance while a menu is visible.
-
-Frame times below come from the client game test, rendered back to back at 960×540. The best of three interleaved rounds is kept.
-
-These were measured on a CPU-only machine (Mesa llvmpipe software rendering), so every shader pixel costs CPU time. **Real GPUs are far faster**, but the relative differences show where the cost lies. No hardware-GPU measurement has been made yet.
-
-| Scene | Frame time |
+| Module | What it does |
 |---|---|
-| In world, Sky Studio off | 11.1 ms |
-| Sky Studio, Vanilla Enhanced | 16.4 ms |
-| Sky Studio, Anubis Eclipse, Detail Low | 17.7 ms |
-| Sky Studio, Anubis Eclipse, Detail High | 23.1 ms |
-| Vanilla title screen | 6.1 ms |
-| Holo title screen, without particles and decorations | 7.3 ms |
-| Holo title screen, all effects | 10.3 ms |
+| **Motion Blur** | Frame-accumulation blur that only appears during fast camera turns, plus soft trails on Holo's panels and toasts while they move. The pass runs *before* the HUD, so text, crosshair, chat and menus are never blurred. Pauses while an Iris shader pack is active. |
+| **Entity Tracers** | Lines, hitbox outlines and labels (name, health, distance) for hostile, passive and neutral mobs, villagers, players where permitted, and a custom id filter. Each category has its own color and approach alert. |
+| **Freecam** | Fly the camera while your player stays exactly where it is.<br>• **Movement:** speed (mouse wheel), acceleration, sprint boost, rotation smoothing and a maximum distance.<br>• **Controls:** a return-to-player key and a position HUD.<br>• Attack, use and pick-block are ignored while detached, because they would act from your player, not the camera. |
 
-The nebula noise is the largest sky cost. *Detail: Low* (or the *Low Performance* profile) skips it, along with the fine star layer.
+### World
+
+| Module | What it does |
+|---|---|
+| **Block ESP** | Draws World Scanner results as outlines, fills or both, optionally through walls. Also: distance fade, tracers, labels and **vein merging** (touching ores become one box, e.g. `Diamond Ore ×6`). |
+| **Holo Sky Studio** | Replaces the overworld sky with a layered procedural sky (gradient, nebula, stars, planets, sun and moon styles, celestial ring, horizon silhouettes). Eight original presets and a full preset library (save, rename, duplicate, export, import). Off by default. |
+
+### Exploration
+
+| Module | What it does |
+|---|---|
+| **Waypoints & Bases** | Per-world waypoints, each with a name, category (Base, Point of Interest, Scouted, Death, Other), note and timestamp.<br>• **Display:** beacons with distances and a compass HUD.<br>• **Automatic:** death points and an optional scouting trail.<br>• **Managing:** a quick-add key, an add/edit form, and a list with show/hide, edit and delete.<br>• **Sharing:** clipboard export and import. |
+| **World Scanner** | Formerly Block Finder. Finds amethyst, ores, debris, containers, spawners, vaults and your own blocks or `#tags` in chunks your client **already has loaded**. Each category has its own color, range, tracer and alert. |
+| **Entity Visibility** | Logs tab-list joins and leaves, game-mode changes and invisibility-flag changes. Where player detection is permitted, it also logs nearby players disappearing while still listed. Shown in a log and optionally as alerts. It never reveals hidden players. |
+
+### Player
+
+| Module | What it does |
+|---|---|
+| **Hollow Hands** | Re-timed swings, walk bob, sprint lean, idle sway, equip styles, positioning and optional swing trails. Presets: **Subtle**, **Smooth**, **Stylized**. Only the drawing changes. |
+| **Character Studio** | Eight original 3D outfits worn on your own skin, shown in third person, the inventory and the menus. Client-side only. |
+
+### Performance
+
+Sky Studio is a single full-screen shader pass that replaces vanilla's sky draws. Menu and loading animations allocate nothing per frame and only advance while a menu is visible. Rounded shapes in the menu and HUD use cached corner textures, so each shape is a handful of draws whatever its size.
+
+Frame times below come from the client game test, rendered back to back at 960×540. The best of three rounds is kept.
+
+These were measured on a CPU-only machine (Mesa llvmpipe software rendering), so every pixel costs CPU time. **Real GPUs are far faster**, but the relative differences show where the cost lies. No hardware-GPU measurement has been made, so no FPS gain is promised.
+
+PERF_TABLES
+
+The nebula noise is the largest sky cost. *Detail: Low* (or the Potato and Low presets) skips it, along with the fine star layer.
 
 ## Building
 
 ```bash
 ./gradlew build            # compiles, runs unit tests, produces build/libs/hollow-<version>.jar
-./gradlew test             # unit tests only (pure logic: settings, config, blur math, hands, filters, alerts, policy)
+./gradlew test             # unit tests only (pure logic: settings, config, profiles, waypoints, aim, bridging, HUD snapping, perf, policy...)
 ./gradlew runClient        # launches the game with Hollow in a dev environment
 ./gradlew prodClient         # runs the release jar exactly as players get it (remapped, with Fabric API)
-./gradlew runClientGameTest  # launches the real client, checks the menus, loading screen, studios and detection, measures frame times and saves screenshots
+./gradlew runClientGameTest  # launches the real client, exercises the features in a test world, measures frame times and saves screenshots
 ```
 
 Headless machines can run the client game test under Xvfb:
@@ -178,11 +118,45 @@ xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest
 # screenshots: build/run/clientGameTest/screenshots/
 ```
 
+## Install
+
+1. Install [Fabric Loader](https://fabricmc.net/use/) 0.17.3 or newer for Minecraft 1.21.11.
+2. Put `hollow-1.3.0.jar` and Fabric API (0.141.0+1.21.11 or newer) into `.minecraft/mods`. Remove older `hollow-*.jar` files.
+3. Start the game and press **Right Shift**.
+
+Upgrading keeps your settings. The config is migrated, a backup is kept (`hollow.json.v3.bak`), and your current setup is saved as the profile **Default**.
+
+## Troubleshooting
+
+| Problem | What to do |
+|---|---|
+| A module says **BLOCKED** | The server isn't permitted for automation (or for detection, for Freecam and scanners). If the server's rules allow it, add it under *Server Rules*. Single-player always works. |
+| A module says **UNAVAILABLE** | Another mod replaced the code Holo hooks into. The reason is shown on the module's page and in `logs/latest.log`. |
+| The menu key does nothing | Check *Options → Controls → Key Binds → Holo*. The *Keybinds* page also lists conflicts. |
+| A Holo keybind does nothing | Keys are ignored while any menu, chat or text field is open. Check the *Key Mode* (Hold vs Toggle) and the conflict warning. |
+| Low FPS | *Performance → Preset: Potato or Low → Apply*, turn on *FPS Boost*, and try *Adaptive Quality*. Sky Studio's *Detail: Low* helps most on weak GPUs. |
+| HUD elements are off-screen or overlapping | *HUD Layout → Open Editor → Reset All*. |
+| Something looks wrong after many changes | *Profiles → Reset Everything*, or load a saved profile. Deleting `config/hollow/hollow.json` also restores the defaults. |
+| Black screen at start-up (older versions) | Update to 1.1.1 or newer. See the 1.1.1 notes in the changelog. |
+
+## Known limitations
+
+- **Performance numbers** were measured with software rendering only. Results on real GPUs will differ.
+- **Server permission lists** are your responsibility. Even on a listed server, its anti-cheat may still flag automated actions. Holo does not try to hide them.
+- **Kill Aura and Trigger Bot** act through your own player: your view turns and your attack cooldown applies, exactly as if you had attacked yourself.
+- **Freecam** can only show what your client has loaded around your player. The camera stops at *Max Distance From Player*.
+- **The World Scanner** only sees loaded chunks. **Entity Visibility** cannot see past a server's vanish system; that is intended.
+- **Waypoints** on a server are stored per server address. Several worlds behind the same address, such as a hub and a survival world, share one list. Each waypoint records its dimension.
+- **Adaptive Quality** only changes Holo's own effects, not Minecraft's video settings.
+- **FPS Boost** skips drawing far entities only; they still exist and tick.
+- **The Knockback Tester's** resistance and test hit work in single-player only.
+- **AMSS:** no utility by this name exists in Holo or its history, so nothing was changed under that name.
+
 ## Project layout
 
 ```
 src/main/java/dev/hollow/
-  core/          Minecraft-independent framework: modules, settings, config, easing, colors
+  core/          Minecraft-independent framework: modules, settings, config, profiles, keybinds, waypoints, aim/bridge/HUD maths, easing, colors
   modules/       Module definitions and their settings
   blur/          Motion blur math (pure) and GPU pass
   hands/         Hand animation state machine (pure) and render hooks
@@ -193,8 +167,16 @@ src/main/java/dev/hollow/
   sky/           Sky Studio renderer, presets and preset store
   character/     Character Studio outfits: model loading, in-game render layer, 3D menu renderer
   menu/          Holo title screen, menu scene, loading screen, buttons, pixel font
-  gui/           Module browser screen and setting widgets
-  mixin/         Render, screen and loading hooks (see the table above)
+  gui/           The Holo menu (HoloScreen), settings panel, keybind and profile pages, setting widgets
+  hud/           HUD element system, HUD editor and module HUDs
+  combat/        Aim Assist, Kill Aura, Trigger Bot, reach and knockback logic
+  bridge/        Auto Bridge and Speed Bridge engine (geometry is in core/bridge)
+  camera/        Freecam
+  exploration/   Waypoints and Entity Visibility
+  perf/          FPS Boost, frame statistics and adaptive quality state
+  input/         Key, mouse-button and combination handling, conflict detection
+  practice/      Single-player helpers (practice targets, test hits)
+  mixin/         Render, input, camera, screen and loading hooks (see the table above)
 src/main/resources/assets/hollow/shaders/   Line, motion blur and sky shaders
 src/main/resources/assets/hollow/textures/  Menu scenes, character artwork, cosmetic skins, sky texture
 tools/generate_art.py                       Regenerates the menu scenes and sky texture (Python + Pillow)

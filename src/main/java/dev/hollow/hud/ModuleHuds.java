@@ -382,15 +382,30 @@ public final class ModuleHuds {
 			return 28;
 		}
 
+		/** The compass only appears once there is something to point at in this dimension. */
+		private static boolean waypointsHere() {
+			if (Waypoints.INSTANCE.store() == null) {
+				return false;
+			}
+			String dimension = Waypoints.dimension();
+			for (Waypoint waypoint : Waypoints.INSTANCE.store().all()) {
+				if (waypoint.visible() && waypoint.dimension().equals(dimension)) {
+					return true;
+				}
+			}
+			return false;
+		}
+
 		@Override
 		public boolean visible() {
 			WaypointsModule m = Hollow.module(WaypointsModule.class);
-			return m.isEnabled() && m.compass.get();
+			return m.isEnabled() && m.compass.get() && waypointsHere();
 		}
 
 		@Override
 		public String hiddenReason() {
-			return offReason(Hollow.module(WaypointsModule.class));
+			WaypointsModule m = Hollow.module(WaypointsModule.class);
+			return m.isEnabled() && m.compass.get() ? "Shows once this dimension has a visible waypoint" : offReason(m);
 		}
 
 		@Override

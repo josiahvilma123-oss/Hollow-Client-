@@ -54,4 +54,11 @@ final class ActionRow extends Row {
 		pressed = 1;
 		return true;
 	}
+
+	@Override
+	boolean activate() {
+		setting.run();
+		pressed = 1;
+		return true;
+	}
 }

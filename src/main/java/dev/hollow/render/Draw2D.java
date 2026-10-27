@@ -46,10 +46,15 @@ public final class Draw2D {
 
 	/**
 	 * Filled rounded rectangle. Drawn in real screen pixels (not GUI pixels) with anti-aliased
-	 * corner edges, so corners stay smooth at every GUI scale.
+	 * corner edges, so corners stay smooth at every GUI scale. Corners come from small cached
+	 * textures ({@link Corners}); while a loading overlay is up they are drawn row by row instead.
 	 */
 	public static void rounded(GuiGraphics g, float x, float y, float w, float h, float radius, int color) {
 		if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) {
+			return;
+		}
+		if (Corners.usable()) {
+			Corners.rounded(g, x, y, w, h, radius, guiScale(), color);
 			return;
 		}
 		float scale = guiScale();
@@ -90,6 +95,10 @@ public final class Draw2D {
 	/** Rounded outline of the given thickness (GUI pixels), anti-aliased on the outer edge. */
 	public static void roundedBorder(GuiGraphics g, float x, float y, float w, float h, float radius, float thickness, int color) {
 		if (w <= 0 || h <= 0 || Colors.alpha(color) == 0) {
+			return;
+		}
+		if (Corners.usable()) {
+			Corners.border(g, x, y, w, h, radius, thickness, guiScale(), color);
 			return;
 		}
 		float scale = guiScale();
@@ -165,7 +174,7 @@ public final class Draw2D {
 		}
 	}
 
-	private static float guiScale() {
+	static float guiScale() {
 		return Math.max(1, Minecraft.getInstance().getWindow().getGuiScale());
 	}
 

@@ -3,7 +3,7 @@ package dev.hollow.menu;
 import com.mojang.realmsclient.RealmsMainScreen;
 import dev.hollow.Hollow;
 import dev.hollow.core.util.Colors;
-import dev.hollow.gui.HollowScreen;
+import dev.hollow.gui.HoloScreen;
 import dev.hollow.modules.CharacterStudioModule;
 import dev.hollow.modules.MainMenuModule;
 import dev.hollow.modules.SkyStudioModule;
@@ -96,12 +96,12 @@ public final class HoloTitleScreen extends Screen {
 
 		y += step;
 		addRenderableWidget(new HoloButton(left, y, 98, 20, Component.literal("Character Studio"),
-			b -> minecraft.setScreen(new HollowScreen(this).openOn(CharacterStudioModule.class)), this::accent));
+			b -> minecraft.setScreen(new HoloScreen(this).openOn(CharacterStudioModule.class)), this::accent));
 		addRenderableWidget(new HoloButton(left + 102, y, 98, 20, Component.literal("Sky Studio"),
-			b -> minecraft.setScreen(new HollowScreen(this).openOn(SkyStudioModule.class)), this::accent));
+			b -> minecraft.setScreen(new HoloScreen(this).openOn(SkyStudioModule.class)), this::accent));
 		y += step;
 		addRenderableWidget(new HoloButton(left, y, 98, 20, Component.literal("Client Settings"),
-			b -> minecraft.setScreen(new HollowScreen(this)), this::accent));
+			b -> minecraft.setScreen(new HoloScreen(this)), this::accent));
 		addRenderableWidget(new HoloButton(left + 102, y, 98, 20, Component.translatable("menu.options"),
 			b -> minecraft.setScreen(new OptionsScreen(this, minecraft.options)), this::accent));
 		y += step + 6;

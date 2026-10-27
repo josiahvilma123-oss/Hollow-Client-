@@ -84,4 +84,10 @@ final class TextRow extends Row {
 	boolean charTyped(CharacterEvent event) {
 		return input.charTyped(event);
 	}
+
+	@Override
+	boolean activate() {
+		input.focus(true);
+		return true;
+	}
 }

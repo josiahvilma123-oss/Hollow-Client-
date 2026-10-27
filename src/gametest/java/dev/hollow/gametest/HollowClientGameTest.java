@@ -1,9 +1,10 @@
 package dev.hollow.gametest;
 
 import dev.hollow.Hollow;
+import dev.hollow.core.module.Category;
 import dev.hollow.core.module.Module;
 import dev.hollow.detection.EntityCategory;
-import dev.hollow.gui.HollowScreen;
+import dev.hollow.gui.HoloScreen;
 import dev.hollow.hands.HandPreset;
 import dev.hollow.character.Cosmetic;
 import dev.hollow.menu.HoloTitleScreen;
@@ -17,6 +18,7 @@ import dev.hollow.modules.EntityTracersModule;
 import dev.hollow.modules.HollowAlertsModule;
 import dev.hollow.modules.HollowHandsModule;
 import dev.hollow.modules.InterfaceModule;
+import dev.hollow.modules.PerformanceModule;
 import dev.hollow.modules.MotionBlurModule;
 import dev.hollow.modules.ServerRulesModule;
 import dev.hollow.modules.SkyStudioModule;
@@ -48,13 +50,21 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			client.options.framerateLimit().set(30);
 			client.options.menuBackgroundBlurriness().set(0);
 		});
-		menuAndLoading(context);
+		boolean benchOnly = System.getenv("HOLO_BENCH_ONLY") != null;
+		if (!benchOnly) {
+			menuAndLoading(context);
+		}
 
 		try (TestSingleplayerContext world = context.worldBuilder()
 				.adjustSettings(creator -> creator.setGameMode(WorldCreationUiState.SelectedGameMode.CREATIVE))
 				.create()) {
 			buildScene(world);
 			world.getClientWorld().waitForChunksRender();
+			if (benchOnly) {
+				measureWorldOverhead(context);
+				measureClickGui(context);
+				return;
+			}
 
 			context.runOnClient(client -> {
 				BlockFinderModule finder = Hollow.module(BlockFinderModule.class);
@@ -96,42 +106,7 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				}
 			});
 
-			// The click GUI itself, then every module's settings window.
-			context.setScreen(() -> new HollowScreen(null));
-			context.waitTicks(12);
-			int index = 3;
-			context.takeScreenshot(String.format("hollow-%02d-gui-windows", index++));
-			String[] pages = {"motion_blur", "hollow_hands", "block_finder", "block_esp", "entity_tracers", "hollow_alerts",
-				"interface", "server_rules", "sky_studio", "character_studio", "theme_packs", "main_menu", "loading_screen", "performance"};
-			for (String id : pages) {
-				Class<? extends Module> type = Hollow.modules().byId(id).orElseThrow().getClass();
-				context.setScreen(() -> new HollowScreen(null).openOn(type));
-				context.waitTicks(12);
-				context.takeScreenshot(String.format("hollow-%02d-gui-%s", index++, id));
-			}
-
-			// Sky Studio's library and management rows (search narrows the page to them).
-			context.runOnClient(client -> Hollow.module(SkyStudioModule.class).setEnabled(true));
-			context.setScreen(() -> new HollowScreen(null).openOn(SkyStudioModule.class));
-			context.waitTicks(8);
-			context.getInput().typeChars("library");
-			context.waitTicks(8);
-			context.takeScreenshot(String.format("hollow-%02d-gui-sky-library", index++));
-			context.runOnClient(client -> Hollow.module(SkyStudioModule.class).setEnabled(false));
-
-			// Search filters the module list.
-			context.setScreen(() -> new HollowScreen(null));
-			context.waitTicks(8);
-			context.getInput().typeChars("trac");
-			context.waitTicks(8);
-			context.takeScreenshot(String.format("hollow-%02d-gui-search-modules", index++));
-
-			// With a settings window open, search filters its settings.
-			context.setScreen(() -> new HollowScreen(null).openOn(EntityTracersModule.class));
-			context.waitTicks(8);
-			context.getInput().typeChars("color");
-			context.waitTicks(8);
-			context.takeScreenshot(String.format("hollow-%02d-gui-search", index++));
+			int index = clickGui(context, 3);
 			context.setScreen(() -> null);
 			context.waitTicks(5);
 
@@ -225,8 +200,17 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot(String.format("hollow-%02d-theme-pack", index++));
 			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
 
-			Benchmarks.run(context, world, () -> new HollowScreen(null), client -> {
-			}, "baseline");
+			index = NewFeatures.run(context, world, index);
+
+			Benchmarks.run(context, world, () -> new HoloScreen(null), client -> {
+			}, "1.3.0");
+			Benchmarks.run(context, world, () -> new HoloScreen(null), client -> {
+				PerformanceModule performance = Hollow.module(PerformanceModule.class);
+				if (performance.preset.get() != PerformanceModule.Preset.POTATO) {
+					performance.preset.set(PerformanceModule.Preset.POTATO);
+					performance.applyPreset();
+				}
+			}, "1.3.0+potato");
 
 			// Disabling every module restores vanilla rendering.
 			context.runOnClient(client -> {
@@ -253,6 +237,187 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 				Hollow.module(InterfaceModule.class);
 			});
 		}
+	}
+
+	/** Where world frame time goes: Holo's default modules, the HUD, and everything off (development aid). */
+	private static void measureWorldOverhead(ClientGameTestContext context) {
+		String[] labels = {"defaults", "defaults, Waypoints off", "defaults, HUD hidden (F1)", "every module off"};
+		java.util.List<java.util.function.Consumer<net.minecraft.client.Minecraft>> setups = java.util.List.of(
+			client -> {
+				Hollow.config().resetAll();
+				client.options.hideGui = false;
+			},
+			client -> Hollow.modules().byId("waypoints").orElseThrow().setEnabled(false),
+			client -> {
+				Hollow.modules().byId("waypoints").orElseThrow().setEnabled(true);
+				client.options.hideGui = true;
+			},
+			client -> {
+				client.options.hideGui = false;
+				Hollow.modules().all().forEach(m -> m.setEnabled(false));
+			});
+		double[] best = new double[labels.length];
+		java.util.Arrays.fill(best, Double.MAX_VALUE);
+		for (int round = 0; round < 3; round++) {
+			for (int i = 0; i < labels.length; i++) {
+				int slot = i;
+				context.runOnClient(client -> setups.get(slot).accept(client));
+				context.waitTicks(8);
+				context.runOnClient(client -> best[slot] = Math.min(best[slot], frameMillis(client, 30)));
+			}
+		}
+		context.runOnClient(client -> Hollow.config().resetAll());
+		for (int i = 0; i < labels.length; i++) {
+			Hollow.LOGGER.info("[bench] world | {} | {} ms/frame", labels[i], String.format(java.util.Locale.ROOT, "%.2f", best[i]));
+		}
+	}
+
+	/** Frame time with the click GUI on its heaviest pages (development aid: HOLO_BENCH_ONLY=1). */
+	private static void measureClickGui(ClientGameTestContext context) {
+		String[] labels = {"no menu", "All Modules", "HUD category", "Aim Assist settings", "Keybinds"};
+		java.util.List<java.util.function.Supplier<net.minecraft.client.gui.screens.Screen>> screens = java.util.List.of(
+			() -> null,
+			() -> new HoloScreen(null),
+			() -> new HoloScreen(null).openCategory(Category.HUD),
+			() -> new HoloScreen(null).openOn(Hollow.modules().byId("aim_assist").orElseThrow().getClass()),
+			() -> new HoloScreen(null).openKeybinds());
+		double[] best = new double[labels.length];
+		java.util.Arrays.fill(best, Double.MAX_VALUE);
+		for (int round = 0; round < 3; round++) {
+			for (int i = 0; i < labels.length; i++) {
+				int slot = i;
+				context.setScreen(screens.get(i));
+				context.waitTicks(8);
+				context.runOnClient(client -> best[slot] = Math.min(best[slot], frameMillis(client, 30)));
+			}
+		}
+		for (int i = 0; i < labels.length; i++) {
+			Hollow.LOGGER.info("[bench] click GUI | {} | {} ms/frame", labels[i], String.format(java.util.Locale.ROOT, "%.2f", best[i]));
+		}
+		context.setScreen(() -> null);
+	}
+
+	/** The click GUI: overview, every category, tool pages, module pages, search, keyboard use and a small window. */
+	private static int clickGui(ClientGameTestContext context, int index) {
+		context.setScreen(() -> new HoloScreen(null));
+		context.waitTicks(12);
+		context.takeScreenshot(String.format("hollow-%02d-gui-all", index++));
+		for (Category category : Category.values()) {
+			context.setScreen(() -> new HoloScreen(null).openCategory(category));
+			context.waitTicks(8);
+			context.takeScreenshot(String.format("hollow-%02d-gui-category-%s", index++, category.name().toLowerCase(java.util.Locale.ROOT)));
+		}
+		context.setScreen(() -> new HoloScreen(null).openKeybinds());
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-keybinds", index++));
+		context.setScreen(() -> new HoloScreen(null).openProfiles());
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-profiles", index++));
+
+		String[] pages = {"aim_assist", "kill_aura", "trigger_bot", "reach_display", "knockback_tester", "auto_bridge", "speed_bridge",
+			"safe_walk", "freecam", "motion_blur", "entity_tracers", "block_esp", "sky_studio", "block_finder", "waypoints",
+			"entity_visibility", "hollow_hands", "character_studio", "performance", "fps_boost", "performance_monitor", "hollow_alerts",
+			"hud_layout", "interface", "main_menu", "loading_screen", "theme_packs", "server_rules"};
+		for (String id : pages) {
+			Class<? extends Module> type = Hollow.modules().byId(id).orElseThrow(() -> new AssertionError("No module " + id)).getClass();
+			context.setScreen(() -> new HoloScreen(null).openOn(type));
+			context.waitTicks(8);
+			context.takeScreenshot(String.format("hollow-%02d-gui-%s", index++, id));
+		}
+
+		// Search narrows the module grid, and inside a settings panel it narrows the settings.
+		context.setScreen(() -> new HoloScreen(null));
+		context.waitTicks(8);
+		context.getInput().typeChars("trac");
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-search-modules", index++));
+		context.setScreen(() -> new HoloScreen(null).openOn(EntityTracersModule.class));
+		context.waitTicks(8);
+		context.getInput().typeChars("color");
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-search-settings", index++));
+
+		// Keyboard: Tab focuses the first card, Space toggles it, Enter opens its settings, Esc goes back.
+		context.setScreen(() -> new HoloScreen(null).openCategory(Category.HUD));
+		context.waitTicks(8);
+		boolean[] before = new boolean[1];
+		context.runOnClient(client -> before[0] = Hollow.modules().byCategory(Category.HUD).get(0).isEnabled());
+		context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_TAB);
+		context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE);
+		context.waitTicks(2);
+		context.runOnClient(client -> {
+			Module first = Hollow.modules().byCategory(Category.HUD).get(0);
+			if (first.isEnabled() == before[0]) {
+				throw new AssertionError("Space did not toggle the focused card (" + first.name() + ")");
+			}
+		});
+		context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE);
+		context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_ENTER);
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-keyboard-panel", index++));
+		context.runOnClient(client -> {
+			Module first = Hollow.modules().byCategory(Category.HUD).get(0);
+			if (!(client.screen instanceof HoloScreen screen) || screen.openModule() != first || first.isEnabled() != before[0]) {
+				throw new AssertionError("Enter did not open the focused module's settings");
+			}
+		});
+		context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_ESCAPE);
+		context.waitTicks(8);
+		context.runOnClient(client -> {
+			if (!(client.screen instanceof HoloScreen screen) || screen.openModule() != null) {
+				throw new AssertionError("Esc did not close the settings panel");
+			}
+		});
+
+		// While the search field has focus, Space and Enter type or search instead of toggling cards.
+		java.util.Map<Module, Boolean> states = new java.util.HashMap<>();
+		context.runOnClient(client -> Hollow.modules().all().forEach(m -> states.put(m, m.isEnabled())));
+		context.setScreen(() -> new HoloScreen(null).openCategory(Category.HUD));
+		context.waitTicks(4);
+		context.getInput().typeChars("al");
+		context.getInput().pressKey(org.lwjgl.glfw.GLFW.GLFW_KEY_SPACE);
+		context.getInput().typeChars(" ");
+		context.waitTicks(2);
+		context.runOnClient(client -> {
+			for (Module module : Hollow.modules().all()) {
+				if (module.isEnabled() != states.get(module)) {
+					throw new AssertionError("Typing in the search field toggled " + module.name());
+				}
+			}
+		});
+
+		context.runOnClient(client -> Hollow.module(InterfaceModule.class).theme.set(InterfaceModule.ThemePreset.PHARAOH_GOLD));
+		context.setScreen(() -> new HoloScreen(null).openCategory(Category.SETTINGS));
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-theme-pharaoh", index++));
+		context.runOnClient(client -> {
+			Hollow.module(InterfaceModule.class).theme.set(InterfaceModule.ThemePreset.HOLO_VIOLET);
+			Hollow.module(InterfaceModule.class).sidebarCollapsed.set(true);
+		});
+		context.setScreen(() -> new HoloScreen(null).openCategory(Category.COMBAT));
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-compact-sidebar", index++));
+		context.runOnClient(client -> Hollow.module(InterfaceModule.class).sidebarCollapsed.set(false));
+
+		// A small window (GUI scale 2 at 640x360 leaves a 320x180 GUI).
+		context.getInput().resizeWindow(640, 360);
+		context.runOnClient(client -> {
+			client.options.guiScale().set(2);
+			client.resizeDisplay();
+		});
+		context.setScreen(() -> new HoloScreen(null).openOn(Hollow.modules().byId("aim_assist").orElseThrow().getClass()));
+		context.waitTicks(10);
+		context.takeScreenshot(String.format("hollow-%02d-gui-small-window", index++));
+		context.setScreen(() -> new HoloScreen(null));
+		context.waitTicks(8);
+		context.takeScreenshot(String.format("hollow-%02d-gui-small-window-grid", index++));
+		context.runOnClient(client -> {
+			client.options.guiScale().set(0);
+			client.resizeDisplay();
+		});
+		context.getInput().resizeWindow(960, 540);
+		context.waitTicks(4);
+		return index;
 	}
 
 	/** The Holo title screen in each scene, the vanilla fallback, studio pages from the menu, and a resource reload. */
@@ -299,16 +464,16 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 
 		// Character Studio from the menu: a large 3D figure and the gallery of every outfit.
 		context.runOnClient(client -> Hollow.module(CharacterStudioModule.class).cosmetic.set(Cosmetic.GRIM_REAPER));
-		context.setScreen(() -> new HollowScreen(new HoloTitleScreen()).openOn(CharacterStudioModule.class));
+		context.setScreen(() -> new HoloScreen(new HoloTitleScreen()).openOn(CharacterStudioModule.class));
 		context.waitTicks(12);
 		context.takeScreenshot(String.format("holo-%02d-menu-character-studio", index++));
 		context.runOnClient(client -> Hollow.module(CharacterStudioModule.class).cosmetic.set(Cosmetic.NONE));
 
 		// Studio pages opened from the menu keep the scene behind them.
-		context.setScreen(() -> new HollowScreen(new HoloTitleScreen()).openOn(SkyStudioModule.class));
+		context.setScreen(() -> new HoloScreen(new HoloTitleScreen()).openOn(SkyStudioModule.class));
 		context.waitTicks(12);
 		context.takeScreenshot(String.format("holo-%02d-menu-sky-studio", index++));
-		context.setScreen(() -> new HollowScreen(new HoloTitleScreen()).openOn(ThemePacksModule.class));
+		context.setScreen(() -> new HoloScreen(new HoloTitleScreen()).openOn(ThemePacksModule.class));
 		context.waitTicks(12);
 		context.takeScreenshot(String.format("holo-%02d-menu-theme-packs", index++));
 

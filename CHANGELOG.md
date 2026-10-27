@@ -1,5 +1,179 @@
 # Changelog
 
+## 1.3.0 — Combat, bridging, exploration, performance and a new menu
+
+Existing settings, keybinds and module states carry over. The config moves to format version 4, and the old file is kept as `hollow.json.v3.bak`. On first start, your current setup is also saved as a profile named **Default**.
+
+### Fair-play rules for this update
+- **Automated actions only run where they are allowed.** This covers Kill Aura, Trigger Bot, Aim Assist, Auto Bridge, Safe Walk and Speed Bridge's automatic placement.
+  - They run in single-player.
+  - On a server, they run only if you list it under *Server Rules → Servers Permitting Automation*. A server under *Restricted Servers* always wins.
+  - Anywhere else the module shows **BLOCKED** and does nothing.
+- **Everything goes through the game's normal actions.** Attacks, block placements and camera turns use the same paths as your own input.
+  - No packets are crafted, delayed or altered, and no server confirmation is faked.
+  - Vanilla reach and attack cooldown always apply.
+  - Nothing hides the client from anti-cheat.
+- **Detection-style features stay off on restricted servers.** This covers the World Scanner, ESP, tracers and Freecam. The scanner never loads chunks.
+- **Entity Visibility reports only what your client can observe.** It never reveals hidden players or their positions.
+
+### Added
+
+**Combat**
+- **Kill Aura**:
+  - Attacks targets you choose (players, hostile, neutral or passive mobs; teammates can be skipped) with ordinary attacks.
+  - Range is capped at your real reach.
+  - It waits for a configurable attack charge and can turn your camera smoothly toward the target.
+  - Also: a field-of-view limit, sword/axe-only mode, a pause while using items, a target outline and a HUD indicator.
+- **Trigger Bot**: attacks when your crosshair rests on an eligible target. It has a reaction delay, a charge threshold and the same target filters.
+- **Reach Display** (visual only):
+  - Shows the distance to what you aim at against your real entity and block reach.
+  - Optional ground rings at both reaches.
+- **Knockback Tester**:
+  - Measures the horizontal and vertical knockback speed and the distance you travel after a hit.
+  - In single-player only, it can also set a knockback-resistance value and deal a test hit.
+  - No packet changes.
+
+**Aim Assist**
+- Smooth assistance that only adds to your own aiming:
+  - It is frame-rate independent and has a speed limit, so it never snaps.
+  - By default it only acts while you move the mouse.
+- **Presets** Subtle, Smooth and Standard; editing a tuned value switches to Custom.
+- Controls:
+  - Strength, smoothness and speed limit.
+  - Optional matching to your mouse sensitivity.
+  - Separate horizontal and vertical multipliers.
+  - Field of view, range and aim point (closest point, body or head).
+- **Target filters and priority** (crosshair, nearest, lowest health), plus a line-of-sight check.
+- **Activation**: always, while attacking, hold a key or toggle a key.
+- **Display**: a target marker and a status HUD (Assisting / No target / Waiting / Blocked here).
+- **Practice mode**:
+  - Spawns static and wandering practice targets in your single-player world.
+  - Counts your hits and accuracy.
+- It stops whenever a menu, chat or text field is open, or the window is unfocused.
+
+**Bridging & Movement**
+- **Auto Bridge**:
+  - Places a block under you as you walk off an edge, against a real neighbouring face.
+  - It never places into air with nothing to click, and never mid-jump or while flying.
+  - Also: placement delay, place-ahead, hotbar block selection, optional sneak at edges, a placement preview and a block counter HUD.
+  - It stops by itself and alerts you when you run out of blocks.
+- **Speed Bridge**, timing help for crouch-and-place bridging:
+  - **Safe** holds sneak at edges.
+  - **Rhythm** gives a visual and audio cue when it is time to place.
+  - **Practice** adds statistics: blocks per second, longest bridge and falls.
+  - Also: edge indicator, placement preview, cue lead and optional automatic placement.
+  - Hold or toggle it with its keybind's *Key Mode*.
+- **Safe Walk**: you never walk off an edge by accident, without the slowdown of sneaking.
+
+**Render**
+- **Freecam**:
+  - The camera flies freely while your player stays exactly where it is.
+  - Speed (mouse wheel), acceleration, sprint boost and rotation smoothing.
+  - A maximum distance from the player, a return-to-player key and a position HUD.
+  - Attack, use and pick-block are ignored while detached, because they would act from your player, not the camera.
+
+**Exploration**
+- **Waypoints & Bases**:
+  - Per-world waypoints with name, category (Base, Point of Interest, Scouted, Death, Other), note and timestamp.
+  - Beacons with names and distances, and a compass strip HUD.
+  - Automatic death points and an optional scouting trail.
+  - A quick-add key.
+  - An add/edit form and a list with show/hide, edit and delete.
+  - Clipboard export/import. Imports are validated and duplicates skipped.
+  - Stored in `config/hollow/waypoints/`.
+- **World Scanner**: Block Finder, renamed and moved to Exploration. It still only reads chunks your client already has.
+- **Entity Visibility**:
+  - Logs tab-list joins and leaves, game-mode changes and invisibility-flag changes.
+  - Where player detection is permitted, it also logs nearby player entities disappearing while still listed.
+  - Events show in a log and optionally as alerts.
+
+**Performance**
+- **Presets** Potato, Low, Balanced, High Quality and Custom. Use *Performance → Preset* and then *Apply*.
+  - They set sky detail, menu and loading effects, motion blur, swing trails and FPS Boost.
+  - They never touch other modules' on/off state, keybinds or unrelated settings.
+- **Adaptive Quality** (optional):
+  - When FPS stays below your target, Holo's own decorative effects step down one level at a time, with a cooldown, and back up when there is headroom.
+  - Your settings themselves are not changed.
+- **FPS Boost**:
+  - Skips drawing mobs, items and other entities beyond chosen distances. Named entities are optional. They still exist and tick; only drawing is skipped.
+  - Caps the number of particles.
+  - Limits the frame rate while the window is in the background.
+- **Performance Monitor HUD**:
+  - FPS, average FPS, average and worst frame time, memory, entities and particles, and the active preset and adaptive level.
+  - Warnings for low FPS, stutter and high memory.
+
+**HUD**
+- **HUD editor** (*HUD* button in the menu, or *HUD Layout → Open Editor*):
+  - Drag every Holo HUD element; edges and centres snap to gold guides.
+  - Arrow keys nudge, right-click resets one element, and *Reset All* restores the layout.
+  - Positions are stored relative to the screen, so they survive resolution changes.
+
+**Framework**
+- **Keybinds**:
+  - Any module can be bound to a key, a mouse button (3–8) or a combination with Ctrl, Shift or Alt.
+  - Each bind has a *Key Mode*: Toggle, or Hold (on only while held).
+  - Conflicts with other Holo binds and Minecraft controls are shown.
+  - Keys never fire while a menu, chat or text field is open.
+- **Profiles**: save the whole setup under a name, then load, rename, export to the clipboard, import (validated, max 512 KB), delete, or reset everything. Older profiles are migrated when loaded.
+- **Error isolation**: a module that throws during its tick is turned off, and a HOLO ALERT tells you, instead of the error repeating every tick.
+
+### Replaced
+- **The click GUI is new**: a central window instead of floating category windows. It has:
+  - A header with search, profile chip, HUD editor and close button.
+  - A collapsible sidebar with eleven categories (Combat, Aim Assist, Bridging, Movement, Render, World, Exploration, Player, Performance, HUD, Settings), each with an icon and an on-count.
+  - Keybinds and Profiles pages.
+  - **Module cards** with switch, status (ON / OFF / BLOCKED / UNAVAILABLE / SETTINGS), keybind and description.
+  - A **settings panel** that slides in, with a reset arrow on every changed setting, a reset for the whole module (it asks you to confirm), the module's live preview, and the reason it is blocked or unavailable.
+  - Full keyboard use: `Ctrl+F` search, `Tab`/arrows to move, `Enter` to open, `Space` to toggle, `←`/`→` to adjust, `Delete` to reset a setting, `Page Up`/`Page Down` to switch category, and `Esc` to go back.
+  - It works from 320×180 GUI pixels up, and settings are saved when it closes.
+- **Interface** settings:
+  - Themes Holo Violet, Pharaoh Gold, Crimson, Frost, Emerald or Custom, each with an accent and a gold *detail* color.
+  - *Reduced Motion*, which turns off sliding, scaling and fading.
+  - Compact sidebar.
+  - The old window-layout and panel-opacity settings are gone with the floating windows.
+
+### Changed
+- Modules are regrouped into the eleven categories above.
+- **Rounded shapes are much cheaper to draw.**
+  - Corners now come from small cached anti-aliased textures, so a shape takes about seven draws instead of one per pixel row of its corners.
+  - This speeds up the menu, the HUD and alerts.
+- Alerts can be placed anywhere with the HUD editor (*Position: Custom*).
+- Performance: the old *Quality / Balanced / Low Performance* profiles became presets (QUALITY maps to High Quality).
+
+### AMSS
+The request asked for the existing "AMSS" utility to be upgraded. Nothing named AMSS exists in this project:
+- The code, settings, resources and the whole git history were searched for it.
+- In line with the instruction not to guess its meaning, nothing was renamed, duplicated or claimed as improved.
+- If AMSS is a feature from another client or a planned idea, describe what it should do and it can be added.
+
+### Tests
+- **Unit tests:** 97 pass (61 before). New tests cover:
+  - Aim maths.
+  - Keybind storage.
+  - HUD snapping.
+  - Bridge placement planning.
+  - Frame statistics and adaptive quality.
+  - The waypoint store (persistence, import, sanitising, damaged files).
+  - Profiles: save/load, full-setup semantics, rename/export/import/delete, file-name collisions, validation, migration of old profiles.
+  - The automation policy.
+  - Config migration v4.
+  - Interface themes.
+- **The in-game test** (`runClientGameTest`) now also checks the following:
+  - Aim Assist turns the view toward a practice target.
+  - Kill Aura damages a zombie in reach.
+  - Trigger Bot attacks the zombie under the crosshair.
+  - Auto Bridge places a real block at an edge.
+  - Freecam moves the camera while the player stays put.
+  - A waypoint is added.
+  - The Knockback Tester measures a hit.
+  - A profile round-trip restores the theme.
+  - Keyboard navigation in the menu works.
+  - Typing in the search field toggles nothing.
+- It also captures screenshots of every menu page, every module's settings, the HUD and the HUD editor.
+
+### Performance results
+BENCH_TABLE
+
 ## 1.2.0 — 3D characters
 
 ### Added

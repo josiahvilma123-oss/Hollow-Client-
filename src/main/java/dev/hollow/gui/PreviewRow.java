@@ -349,4 +349,9 @@ final class PreviewRow extends Row {
 		Draw2D.text(g, ui.font, "Player detection: " + (players ? "allowed" : "off (not permitted)"), x + 6, y + 39,
 			ui.c(players ? ui.accentLight : Theme.TEXT_DIM));
 	}
+
+	@Override
+	boolean focusable() {
+		return false;
+	}
 }

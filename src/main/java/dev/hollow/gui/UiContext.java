@@ -12,6 +12,10 @@ final class UiContext {
 	boolean descriptions = true;
 	int accent;
 	int accentLight;
+	/** Ornament color (gold by default). */
+	int detail;
+	/** Animations jump straight to their end state. */
+	boolean reducedMotion;
 
 	int accentDarkOr() {
 		return Colors.lerp(accent, 0xFF000000, 0.55f);
@@ -23,6 +27,9 @@ final class UiContext {
 
 	/** Exponential approach helper scaled by the user's animation speed. */
 	double approach(double current, double target, double timeConstant) {
+		if (reducedMotion) {
+			return target;
+		}
 		return dev.hollow.core.anim.Smooth.approach(current, target, delta * animationSpeed, timeConstant);
 	}
 }
