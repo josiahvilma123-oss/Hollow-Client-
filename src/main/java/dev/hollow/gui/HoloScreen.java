@@ -519,7 +519,7 @@ public final class HoloScreen extends Screen {
 		int bottom = winY + winH - FOOTER;
 		int available = bottom - navTop() - 4;
 		int needed = navs.size() * 17 + 9;
-		navItemH = needed <= available ? 17 : Math.max(12, (available - 9) / navs.size());
+		navItemH = needed <= available ? 17 : Math.max(11, (available - 9) / navs.size());
 		int total = navs.size() * navItemH + 9;
 		sideScroll = Math.max(0, Math.min(Math.max(0, total - available), sideScroll));
 

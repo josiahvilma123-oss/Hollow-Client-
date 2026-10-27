@@ -93,24 +93,32 @@ public final class HudEditorScreen extends Screen {
 	public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
 		super.render(g, mouseX, mouseY, partialTick);
 		HudElement hovered = dragging != null ? dragging : elementAt(mouseX, mouseY);
-		for (HudElement element : HudElements.all()) {
-			float[] b = box(element);
-			Matrix3x2fStack pose = g.pose();
-			pose.pushMatrix();
-			pose.translate(b[0], b[1]);
-			pose.scale(element.scale(), element.scale());
-			element.render(g, true);
-			pose.popMatrix();
-			boolean shown = element.drawnElsewhere() || element.visible();
-			if (!shown) {
-				g.fill((int) b[0], (int) b[1], (int) (b[0] + b[2]), (int) (b[1] + b[3]), 0x90000000);
+		// Hidden elements first, so the ones that are actually showing stay on top and readable.
+		for (int pass = 0; pass < 2; pass++) {
+			for (HudElement element : HudElements.all()) {
+				boolean shown = element.drawnElsewhere() || element.visible();
+				if (shown != (pass == 1)) {
+					continue;
+				}
+				float[] b = box(element);
+				Matrix3x2fStack pose = g.pose();
+				pose.pushMatrix();
+				pose.translate(b[0], b[1]);
+				pose.scale(element.scale(), element.scale());
+				element.render(g, true);
+				pose.popMatrix();
+				if (!shown) {
+					g.fill((int) b[0], (int) b[1], (int) (b[0] + b[2]), (int) (b[1] + b[3]), 0xB0000000);
+				}
+				int border = element == selected ? Theme.accentLight() : element == hovered ? Theme.accent() : Colors.withAlpha(Theme.accent(), 90);
+				Draw2D.border(g, (int) b[0] - 1, (int) b[1] - 1, (int) b[2] + 2, (int) b[3] + 2, border);
+				// The reason an element is hidden only shows on hover or selection, to keep the canvas readable.
+				boolean focus = element == hovered || element == selected;
+				String label = element.name() + (shown || !focus ? "" : " · " + element.hiddenReason());
+				int labelY = b[1] >= 11 ? (int) b[1] - 10 : (int) (b[1] + b[3] + 2);
+				int width = focus ? Math.max(60, (int) b[2] + 160) : (int) b[2];
+				Draw2D.text(g, font, Draw2D.ellipsize(font, label, width), (int) b[0], labelY, shown || focus ? Theme.TEXT : Theme.TEXT_FAINT);
 			}
-			int border = element == selected ? Theme.accentLight() : element == hovered ? Theme.accent() : Colors.withAlpha(Theme.accent(), 90);
-			Draw2D.border(g, (int) b[0] - 1, (int) b[1] - 1, (int) b[2] + 2, (int) b[3] + 2, border);
-			String label = element.name() + (shown ? "" : " · " + element.hiddenReason());
-			int labelY = b[1] >= 11 ? (int) b[1] - 10 : (int) (b[1] + b[3] + 2);
-			Draw2D.text(g, font, Draw2D.ellipsize(font, label, Math.max(60, (int) b[2] + 60)), (int) b[0], labelY,
-				shown ? Theme.TEXT : Theme.TEXT_DIM);
 		}
 		int gold = 0xFFE6B54A;
 		for (HudSnap.Guide guide : guides) {

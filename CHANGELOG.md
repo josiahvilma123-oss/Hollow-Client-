@@ -125,7 +125,7 @@ Existing settings, keybinds and module states carry over. The config moves to fo
   - **Module cards** with switch, status (ON / OFF / BLOCKED / UNAVAILABLE / SETTINGS), keybind and description.
   - A **settings panel** that slides in, with a reset arrow on every changed setting, a reset for the whole module (it asks you to confirm), the module's live preview, and the reason it is blocked or unavailable.
   - Full keyboard use: `Ctrl+F` search, `Tab`/arrows to move, `Enter` to open, `Space` to toggle, `←`/`→` to adjust, `Delete` to reset a setting, `Page Up`/`Page Down` to switch category, and `Esc` to go back.
-  - It works from 320×180 GUI pixels up, and settings are saved when it closes.
+  - It works down to Minecraft's smallest GUI size (320×240 GUI pixels), where the sidebar becomes icons. Settings are saved when it closes.
 - **Interface** settings:
   - Themes Holo Violet, Pharaoh Gold, Crimson, Frost, Emerald or Custom, each with an accent and a gold *detail* color.
   - *Reduced Motion*, which turns off sliding, scaling and fading.
@@ -171,8 +171,44 @@ The request asked for the existing "AMSS" utility to be upgraded. Nothing named 
   - Typing in the search field toggles nothing.
 - It also captures screenshots of every menu page, every module's settings, the HUD and the HUD editor.
 
+### Files
+Java paths are relative to `src/main/java/dev/hollow/`.
+
+**Added (81)**
+`src/gametest/java/dev/hollow/gametest/Benchmarks.java`, `src/gametest/java/dev/hollow/gametest/NewFeatures.java`, `ModuleRuntime.java`, `bridge/BridgeAssist.java`, `bridge/BridgeInput.java`, `bridge/Bridging.java`, `camera/Freecam.java`, `combat/AimAssist.java`, `combat/Attacks.java`, `combat/KillAura.java`, `combat/KnockbackTester.java`, `combat/ReachMeter.java`, `combat/TargetSettings.java`, `combat/Targeting.java`, `core/aim/AimMath.java`, `core/bridge/BridgeMath.java`, `core/config/ProfileStore.java`, `core/hud/HudSnap.java`, `core/input/BindMode.java`, `core/input/Keybind.java`, `core/module/Tickable.java`, `core/perf/AdaptiveQuality.java`, `core/perf/FrameStats.java`, `core/waypoints/Waypoint.java`, `core/waypoints/WaypointStore.java`, `exploration/VisibilityLog.java`, `exploration/Waypoints.java`, `gui/Confirm.java`, `gui/ConfirmRow.java`, `gui/HoloScreen.java`, `gui/Icons.java`, `gui/InfoRow.java`, `gui/KeybindsPage.java`, `gui/Pill.java`, `gui/ProfilesPage.java`, `gui/RowList.java`, `gui/SettingsPanel.java`, `gui/VisibilityLogRow.java`, `gui/WaypointListRow.java`, `hud/AlertsHudElement.java`, `hud/HudEditorScreen.java`, `hud/HudElement.java`, `hud/HudElements.java`, `hud/HudStyle.java`, `hud/ModuleHuds.java`, `input/KeyInput.java`, `input/KeybindConflicts.java`, `mixin/CameraMixin.java`, `mixin/EntityRenderDispatcherMixin.java`, `mixin/FramerateLimitTrackerMixin.java`, `mixin/KeyboardInputMixin.java`, `mixin/MouseHandlerMixin.java`, `mixin/ParticleEngineMixin.java`, `mixin/PlayerMixin.java`, `modules/AimAssistModule.java`, `modules/AutoBridgeModule.java`, `modules/EntityVisibilityModule.java`, `modules/FpsBoostModule.java`, `modules/FreecamModule.java`, `modules/HudLayoutModule.java`, `modules/KillAuraModule.java`, `modules/KnockbackTesterModule.java`, `modules/PerformanceMonitorModule.java`, `modules/ReachDisplayModule.java`, `modules/SafeWalkModule.java`, `modules/SpeedBridgeModule.java`, `modules/TriggerBotModule.java`, `modules/WaypointsModule.java`, `perf/FpsBoost.java`, `perf/PerformanceState.java`, `policy/Automation.java`, `practice/LocalServer.java`, `render/Corners.java`, `render/OverlayProvider.java`, `src/test/java/dev/hollow/core/AimMathTest.java`, `src/test/java/dev/hollow/core/BridgeMathTest.java`, `src/test/java/dev/hollow/core/HudSnapTest.java`, `src/test/java/dev/hollow/core/KeybindTest.java`, `src/test/java/dev/hollow/core/PerformanceMathTest.java`, `src/test/java/dev/hollow/core/ProfileStoreTest.java`, `src/test/java/dev/hollow/core/WaypointStoreTest.java`
+
+**Modified (56)**
+`CHANGELOG.md`, `README.md`, `gradle.properties`, `src/gametest/java/dev/hollow/gametest/HollowClientGameTest.java`, `Hollow.java`, `HollowClient.java`, `ModuleKeybinds.java`, `alerts/AlertSource.java`, `blur/MotionBlurRenderer.java`, `core/config/ConfigManager.java`, `core/config/ConfigMigrations.java`, `core/module/Category.java`, `core/module/Module.java`, `core/setting/KeySetting.java`, `core/setting/TextSetting.java`, `detection/BlockScanner.java`, `gui/ActionBarRow.java`, `gui/ActionRow.java`, `gui/BoolRow.java`, `gui/ColorRow.java`, `gui/EnumRow.java`, `gui/HeaderRow.java`, `gui/KeyRow.java`, `gui/NumberRow.java`, `gui/PreviewRow.java`, `gui/Row.java`, `gui/TextRow.java`, `gui/Toggle.java`, `gui/UiContext.java`, `hands/HandRenderHooks.java`, `menu/HoloTitleScreen.java`, `menu/MenuScene.java`, `mixin/GameRendererMixin.java`, `modules/BlockEspModule.java`, `modules/BlockFinderModule.java`, `modules/CharacterStudioModule.java`, `modules/EntityTracersModule.java`, `modules/HollowAlertsModule.java`, `modules/HollowHandsModule.java`, `modules/InterfaceModule.java`, `modules/LoadingScreenModule.java`, `modules/MainMenuModule.java`, `modules/MotionBlurModule.java`, `modules/PerformanceModule.java`, `modules/ServerRulesModule.java`, `modules/SkyStudioModule.java`, `modules/ThemePacksModule.java`, `policy/ServerPolicy.java`, `render/Draw2D.java`, `render/HudOverlay.java`, `render/Theme.java`, `render/WorldOverlayRenderer.java`, `sky/HoloSkyRenderer.java`, `resources/hollow.mixins.json`, `src/test/java/dev/hollow/core/ConfigManagerTest.java`, `src/test/java/dev/hollow/policy/ServerPolicyTest.java`
+
+**Removed: replaced by the new menu (3)**
+`gui/CategoryWindow.java`, `gui/HollowScreen.java`, `gui/ModuleWindow.java`
+
 ### Performance results
-BENCH_TABLE
+Measured by `runClientGameTest` on a CPU-only machine with software rendering (Mesa llvmpipe), at 960×540. Each value is the best of three rounds of 30 back-to-back frames, in **milliseconds per frame (lower is better)**.
+
+- **1.2.0** was run with the 1.2.0 code before this update.
+- **1.3.0** was run twice; both runs are shown, to give an idea of the run-to-run noise.
+- **Potato** is the same run with *Performance → Potato → Apply*.
+
+| Scene | 1.2.0 | 1.3.0 default | 1.3.0 Potato |
+|---|---|---|---|
+| Standing still | 19.9 | 21.9 / 22.6 | 18.7 / 18.8 |
+| 6000 flame particles | 36.0 | 39.7 / 41.0 | 18.0 / 20.1 |
+| Holo menu open | 65.6 (old menu) | 57.4 / 61.4 (new menu) | 24.9 / 25.9 |
+| 150 mobs + 200 items, tracers | 38.1 | 39.0 / 37.9 | 27.8 / 28.3 |
+| Sky, outfit, blur, tracers + crowd | 33.4 | 34.9 / 34.9 | 27.4 / 30.4 |
+
+**What the numbers say:**
+- **The new menu** is cheaper than the old one, while showing more.
+  - It owes this to the new corner textures.
+  - Before that change, the same menu measured 126 ms.
+  - In a quieter scene, an empty world went from 13.0 ms with no menu to 22.1 ms with the menu on All Modules.
+- **With default settings, 1.3.0 is about 1–4 ms per frame slower than 1.2.0** in these software-rendered scenes.
+  - About 0.9 ms of that came from the new waypoint compass HUD. It now only appears once the dimension has a visible waypoint, so a fresh install doesn't pay it. The two 1.3.0 runs above were taken before that change.
+  - The rest is within run-to-run noise or comes from the new per-frame hooks, which are near-free while their modules are off.
+  - In a simple scene, defaults cost 1.4 ms more than all modules off.
+- **The Potato preset** roughly halves the particle-heavy frame and saves 20–30 % in crowds.
+- **These are software-rendering results.** No FPS gain on a real GPU is promised.
 
 ## 1.2.0 — 3D characters
 

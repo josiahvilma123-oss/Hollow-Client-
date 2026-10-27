@@ -399,8 +399,8 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 		context.takeScreenshot(String.format("hollow-%02d-gui-compact-sidebar", index++));
 		context.runOnClient(client -> Hollow.module(InterfaceModule.class).sidebarCollapsed.set(false));
 
-		// A small window (GUI scale 2 at 640x360 leaves a 320x180 GUI).
-		context.getInput().resizeWindow(640, 360);
+		// The smallest GUI Minecraft allows: GUI scale 2 at 640x480 leaves 320x240 GUI pixels.
+		context.getInput().resizeWindow(640, 480);
 		context.runOnClient(client -> {
 			client.options.guiScale().set(2);
 			client.resizeDisplay();

@@ -205,7 +205,8 @@ final class SettingsPanel {
 		g.pose().pushMatrix();
 		g.pose().translate(nameX, y + 7);
 		g.pose().scale(1.35f, 1.35f);
-		int titleRoom = (int) ((resetX(ui) - nameX - 60) / 1.35f);
+		int statusWidth = Math.round(ui.font.width(status(module)) * 0.75f) + 7;
+		int titleRoom = (int) ((resetX(ui) - nameX - statusWidth - 12) / 1.35f);
 		Draw2D.text(g, ui.font, Draw2D.ellipsize(ui.font, module.name(), Math.max(30, titleRoom)), 0, 0, ui.c(Theme.TEXT));
 		g.pose().popMatrix();
 		int afterName = nameX + (int) (Math.min(ui.font.width(module.name()), Math.max(30, titleRoom)) * 1.35f) + 6;
