@@ -45,8 +45,8 @@ public final class BlockFinderModule extends Module {
 	private final Map<String, CategorySettings> categories = new LinkedHashMap<>();
 
 	public BlockFinderModule() {
-		super("block_finder", "Block Finder", "Finds selected blocks in loaded chunks and reports new finds.",
-			Category.VISUALS_DETECTION, false);
+		super("block_finder", "World Scanner", "Highlights and reports selected blocks in chunks your client has already loaded. Never loads chunks.",
+			Category.EXPLORATION, false);
 		for (BlockCategory category : BlockCategory.ALL) {
 			categories.put(category.id(), new CategorySettings(category));
 		}

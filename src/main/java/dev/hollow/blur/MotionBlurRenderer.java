@@ -50,7 +50,7 @@ public final class MotionBlurRenderer {
 	public void onWorldRendered(Minecraft minecraft) {
 		hookReached = true;
 		MotionBlurModule module = Hollow.module(MotionBlurModule.class);
-		if (!module.cameraActive() || minecraft.level == null
+		if (!module.cameraActive() || minecraft.level == null || dev.hollow.perf.PerformanceState.INSTANCE.effectLevel() >= 2
 				|| module.pauseWithShaders.get() && ShaderPackCompat.shaderPackActive()) {
 			if (history != null) {
 				release();

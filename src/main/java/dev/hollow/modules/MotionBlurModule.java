@@ -28,7 +28,7 @@ public final class MotionBlurModule extends Module {
 
 	public MotionBlurModule() {
 		super("motion_blur", "Motion Blur", "Restrained, atmospheric blur during fast turns and GUI transitions.",
-			Category.VISUALS_DETECTION, true);
+			Category.RENDER, true);
 	}
 
 	public boolean cameraActive() {

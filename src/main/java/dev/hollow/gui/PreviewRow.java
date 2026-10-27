@@ -215,7 +215,7 @@ final class PreviewRow extends Row {
 		int total = counts.values().stream().mapToInt(Integer::intValue).sum();
 		String status;
 		if (!finder.isEnabled()) {
-			status = "Off · enable Block Finder to start scanning";
+			status = "Off · enable World Scanner to start scanning";
 		} else if (!Hollow.module(ServerRulesModule.class).detectionAllowed()) {
 			status = "Paused · this server is listed as restricted";
 		} else {

@@ -22,6 +22,6 @@ public final class LoadingScreenModule extends Module {
 		"Hand over to the menu as soon as loading completes instead of waiting for the two-second fade.", true));
 
 	public LoadingScreenModule() {
-		super("loading_screen", "Loading Screen", "Animated Holo start-up and resource loading screen.", Category.CLIENT, true);
+		super("loading_screen", "Loading Screen", "Animated Holo start-up and resource loading screen.", Category.SETTINGS, true);
 	}
 }

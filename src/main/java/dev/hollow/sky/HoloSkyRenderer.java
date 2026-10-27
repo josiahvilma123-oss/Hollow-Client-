@@ -207,7 +207,9 @@ public final class HoloSkyRenderer {
 		int moonPhase = moonPhaseIndex;
 		float illumination = (float) ((1 + Math.cos(moonPhase * Math.PI / 4)) / 2);
 		float phase = (moonPhase <= 4 ? -1f : 1f) * Math.max(0.02f, illumination);
-		int detail = m.detail.get().ordinal();
+		// Adaptive quality can cap the detail temporarily without changing the setting.
+		int adaptiveCap = 2 - Math.min(2, dev.hollow.perf.PerformanceState.INSTANCE.effectLevel());
+		int detail = Math.min(m.detail.get().ordinal(), adaptiveCap);
 		GpuTextureView texture = resolveTexture(m.texture.get());
 		float textureOpacity = textureValid ? m.textureOpacity.getFloat() : 0f;
 		int planets = m.planets.getInt();

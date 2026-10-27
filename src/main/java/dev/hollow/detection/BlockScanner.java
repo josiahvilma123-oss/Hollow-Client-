@@ -360,7 +360,7 @@ public final class BlockScanner {
 	private void warnCap() {
 		if (!capWarned) {
 			capWarned = true;
-			Hollow.LOGGER.warn("Block Finder reached {} matches; narrow the whitelist or categories to see more", MAX_MATCHES);
+			Hollow.LOGGER.warn("World Scanner reached {} matches; narrow the whitelist or categories to see more", MAX_MATCHES);
 		}
 	}
 

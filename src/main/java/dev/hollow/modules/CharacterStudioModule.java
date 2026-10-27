@@ -12,6 +12,6 @@ public final class CharacterStudioModule extends Module {
 
 	public CharacterStudioModule() {
 		super("character_studio", "Character Studio", "Eight original 3D outfits for your own skin, from a grim reaper to a space voyager.",
-			Category.STUDIO, true);
+			Category.PLAYER, true);
 	}
 }

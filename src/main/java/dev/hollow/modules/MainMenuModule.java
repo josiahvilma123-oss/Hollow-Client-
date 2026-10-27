@@ -72,7 +72,7 @@ public final class MainMenuModule extends Module {
 	public final BoolSetting decorations = add("Effects", new BoolSetting("decorations", "Decorative Effects", "Light rays, logo ring and vignette.", true));
 
 	public MainMenuModule() {
-		super("main_menu", "Main Menu", "The Holo title screen. Turn off to restore Minecraft's own menu.", Category.CLIENT, true);
+		super("main_menu", "Main Menu", "The Holo title screen. Turn off to restore Minecraft's own menu.", Category.SETTINGS, true);
 		customImage.visibleWhen(() -> scene.get() == Scene.CUSTOM);
 		featuredCharacter.visibleWhen(() -> character.get() == Featured.CHOOSE);
 		openFolder.visibleWhen(() -> scene.get() == Scene.CUSTOM);

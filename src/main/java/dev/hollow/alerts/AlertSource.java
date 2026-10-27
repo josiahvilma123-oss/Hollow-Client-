@@ -8,7 +8,9 @@ public enum AlertSource implements EnumSetting.Displayable {
 	HOSTILE("hostile", "Hostile Mobs"),
 	PASSIVE("passive", "Passive Mobs & Animals"),
 	NEUTRAL("neutral", "Villagers & Neutral"),
-	PLAYERS("players", "Players");
+	PLAYERS("players", "Players"),
+	VISIBILITY("visibility", "Entity Visibility"),
+	SYSTEM("system", "Holo Status");
 
 	private final String id;
 	private final String displayName;

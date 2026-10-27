@@ -135,7 +135,7 @@ public final class MenuScene {
 		if (characterLeftBound >= 0 && cosmetic != null) {
 			drawCharacter(g, cosmetic, w, h, characterLeftBound, px, mouseX, mouseY, motion, lighting);
 		}
-		if (m.particles.get()) {
+		if (m.particles.get() && dev.hollow.perf.PerformanceState.INSTANCE.effectLevel() < 3) {
 			PARTICLES.render(g, w, h, m.particleCount.getInt(), motion, delta, time, accent, 1f);
 		}
 		if (m.decorations.get()) {

@@ -25,7 +25,7 @@ public final class InterfaceModule extends Module {
 
 	public InterfaceModule() {
 		super("interface", "Interface", "Theme and behaviour of the Hollow menu. Open it with Right Shift (rebind in Controls).",
-			Category.CLIENT, true);
+			Category.SETTINGS, true);
 		layout.visibleWhen(() -> false);
 	}
 

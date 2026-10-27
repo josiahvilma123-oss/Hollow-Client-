@@ -60,7 +60,7 @@ public final class HollowHandsModule extends Module {
 
 	public HollowHandsModule() {
 		super("hollow_hands", "Hollow Hands", "Smooth swings, bobbing, equip transitions and hand positioning.",
-			Category.VISUALS_DETECTION, true);
+			Category.PLAYER, true);
 		preset.onChange(this::applyPreset);
 		for (Setting<?> setting : presetControlled()) {
 			setting.onChange(value -> {

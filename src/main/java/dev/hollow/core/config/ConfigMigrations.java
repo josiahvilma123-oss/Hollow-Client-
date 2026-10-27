@@ -22,6 +22,10 @@ public final class ConfigMigrations {
 			current = toV3(current);
 			version = 3;
 		}
+		if (version < 4) {
+			current = toV4(current);
+			version = 4;
+		}
 		current.addProperty("version", version);
 		return current;
 	}
@@ -48,6 +52,25 @@ public final class ConfigMigrations {
 				settings.addProperty("character", "CHOOSE");
 				settings.addProperty("featured_character", old);
 			}
+		}
+		return root;
+	}
+
+	/**
+	 * v3 to v4: the Performance module's "profile" (QUALITY, BALANCED, LOW) became "preset"
+	 * (POTATO, LOW, BALANCED, HIGH_QUALITY, CUSTOM). Keybinds keep their numeric form, which
+	 * still reads as a plain key.
+	 */
+	private static JsonObject toV4(JsonObject root) {
+		JsonObject settings = settingsOf(root, "performance");
+		if (settings != null && settings.has("profile") && settings.get("profile").isJsonPrimitive()) {
+			String old = settings.get("profile").getAsString();
+			settings.addProperty("preset", switch (old) {
+				case "QUALITY" -> "HIGH_QUALITY";
+				case "LOW" -> "LOW";
+				default -> "BALANCED";
+			});
+			settings.remove("profile");
 		}
 		return root;
 	}

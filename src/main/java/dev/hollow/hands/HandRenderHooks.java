@@ -125,7 +125,7 @@ public final class HandRenderHooks {
 
 	/** Called just before a held item is submitted; the next item layer transform is sampled. */
 	public static void beforeHeldItem() {
-		awaitingItemTransform = active && currentSwinging && module().trails.get();
+		awaitingItemTransform = active && currentSwinging && module().trails.get() && dev.hollow.perf.PerformanceState.INSTANCE.effectLevel() < 2;
 	}
 
 	public static void afterHeldItem() {
@@ -155,7 +155,7 @@ public final class HandRenderHooks {
 			return;
 		}
 		HollowHandsModule module = module();
-		if (!module.trails.get()) {
+		if (!module.trails.get() || dev.hollow.perf.PerformanceState.INSTANCE.effectLevel() >= 2) {
 			MAIN_TRAIL.clear();
 			OFF_TRAIL.clear();
 			return;

@@ -99,7 +99,7 @@ public final class ThemePacksModule extends Module {
 
 	public ThemePacksModule() {
 		super("theme_packs", "Theme Packs", "Coordinated collections: matching sky, character, colors, weapon style and menu.",
-			Category.STUDIO, true);
+			Category.SETTINGS, true);
 	}
 
 	@Override

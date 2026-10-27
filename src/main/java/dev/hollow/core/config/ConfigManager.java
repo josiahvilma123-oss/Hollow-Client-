@@ -30,8 +30,11 @@ public final class ConfigManager {
 	 * 1 - initial release (visuals, detection, alerts).
 	 * 2 - Holo update: Sky Studio, Character Studio, theme packs, main menu, loading screen,
 	 *     performance. Existing module settings are untouched; new modules start at defaults.
+	 * 3 - Main menu featured character split into a mode and a character.
+	 * 4 - Major update: keybinds may be mouse buttons or combinations (object form), modules
+	 *     gain a key mode, performance profiles are renamed to presets.
 	 */
-	public static final int VERSION = 3;
+	public static final int VERSION = 4;
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 
 	private final Path file;
@@ -41,6 +44,7 @@ public final class ConfigManager {
 	private final Consumer<String> log;
 	private long dirtySince = -1;
 	private boolean loading;
+	private String activeProfile = "";
 
 	public ConfigManager(Path file, ModuleManager modules, Clock clock, long debounceMillis, Consumer<String> log) {
 		this.file = file;
@@ -103,16 +107,38 @@ public final class ConfigManager {
 			applyDefaults();
 			return;
 		}
-		int version = root.has("version") && root.get("version").isJsonPrimitive() ? root.get("version").getAsInt() : 1;
+		int version = versionOf(root);
 		if (version < VERSION) {
 			backupBeforeMigration(version);
-			root = ConfigMigrations.migrate(root, version, log);
 		}
+		apply(root);
+		dirtySince = version < VERSION ? clock.millis() : -1;
+	}
+
+	private static int versionOf(JsonObject root) {
+		return root.has("version") && root.get("version").isJsonPrimitive() ? root.get("version").getAsInt() : 1;
+	}
+
+	/**
+	 * Applies a complete configuration of any version: it is migrated first, then every module's
+	 * state and settings are set from it. Modules and settings it doesn't mention return to their
+	 * defaults, so the result matches the configuration exactly. Invalid values are skipped.
+	 */
+	public void apply(JsonObject source) {
+		JsonObject root = source;
+		int version = versionOf(root);
+		if (version < VERSION) {
+			root = ConfigMigrations.migrate(root, version, log);
+		} else if (version > VERSION) {
+			log.accept("Configuration is from a newer Holo version (" + version + "); loading what this version understands");
+		}
+		activeProfile = root.has("profile") && root.get("profile").isJsonPrimitive() ? root.get("profile").getAsString() : "";
 		loading = true;
 		try {
 			JsonObject moduleObjects = root.has("modules") && root.get("modules").isJsonObject()
 				? root.getAsJsonObject("modules") : new JsonObject();
 			for (Module module : modules.all()) {
+				resetSettings(module);
 				JsonElement element = moduleObjects.get(module.id());
 				if (element == null || !element.isJsonObject()) {
 					module.setEnabled(module.defaultEnabled());
@@ -123,7 +149,35 @@ public final class ConfigManager {
 		} finally {
 			loading = false;
 		}
-		dirtySince = version < VERSION ? clock.millis() : -1;
+	}
+
+	/** Every module back to its default state and settings. */
+	public void resetAll() {
+		JsonObject empty = new JsonObject();
+		empty.addProperty("version", VERSION);
+		apply(empty);
+		markDirty();
+	}
+
+	public String activeProfile() {
+		return activeProfile;
+	}
+
+	public void activeProfile(String name) {
+		activeProfile = name == null ? "" : name;
+		markDirty();
+	}
+
+	private void resetSettings(Module module) {
+		for (Setting<?> setting : module.settings()) {
+			if (setting.persistent()) {
+				try {
+					setting.reset();
+				} catch (RuntimeException e) {
+					log.accept("Could not reset " + module.id() + "." + setting.id() + ": " + e.getMessage());
+				}
+			}
+		}
 	}
 
 	private void backupBeforeMigration(int version) {
@@ -177,6 +231,9 @@ public final class ConfigManager {
 	public JsonObject toJson() {
 		JsonObject root = new JsonObject();
 		root.addProperty("version", VERSION);
+		if (!activeProfile.isEmpty()) {
+			root.addProperty("profile", activeProfile);
+		}
 		JsonObject moduleObjects = new JsonObject();
 		for (Module module : modules.all()) {
 			JsonObject object = new JsonObject();

@@ -8,7 +8,7 @@ import dev.hollow.core.setting.NumberSetting;
 import dev.hollow.render.BoxStyle;
 import dev.hollow.render.TracerOrigin;
 
-/** How Block Finder results are drawn. Disable it to keep Block Finder as alerts-only. */
+/** How World Scanner results are drawn. Disable it to keep the scanner as alerts-only. */
 public final class BlockEspModule extends Module {
 	public final EnumSetting<BoxStyle> style = add("Boxes", new EnumSetting<>("style", "Box Style", "Outline, filled or both.", BoxStyle.BOTH));
 	public final NumberSetting lineWidth = add("Boxes", new NumberSetting("line_width", "Line Width", "Outline thickness in pixels.", 2, 1, 6, 0.5).unit("px"));
@@ -36,7 +36,7 @@ public final class BlockEspModule extends Module {
 		"Limit how many matches each category may show.", 64, 1, 500, 1));
 
 	public BlockEspModule() {
-		super("block_esp", "Block ESP", "Boxes, tracers and labels for Block Finder results.", Category.VISUALS_DETECTION, true);
+		super("block_esp", "Block ESP", "Boxes, tracers and labels for World Scanner results.", Category.WORLD, true);
 		BooleanVisibility.when(tracers, tracerOrigin, tracerWidth, tracerOpacity);
 		BooleanVisibility.when(labels, distance, labelScale, maxLabels);
 	}

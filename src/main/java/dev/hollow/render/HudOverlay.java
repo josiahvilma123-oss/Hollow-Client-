@@ -29,10 +29,19 @@ public final class HudOverlay {
 	private static final long EXIT_MILLIS = 320;
 
 	private final float[] projected = new float[2];
+	private final List<float[]> boxPool = new ArrayList<>();
+	private final List<float[]> placedBoxes = new ArrayList<>();
+	private final List<PlacedLabel> draws = new ArrayList<>();
 	private final Map<AlertFeed.Toast, Smooth> toastY = new IdentityHashMap<>();
 	private long lastFrame = -1;
+	private dev.hollow.hud.HudElement alertsElement;
 
 	private HudOverlay() {
+	}
+
+	/** The layout element that positions toasts when their placement is Custom. */
+	public void setAlertsElement(dev.hollow.hud.HudElement element) {
+		alertsElement = element;
 	}
 
 	public void renderLabels(GuiGraphics g, DeltaTracker delta) {
@@ -46,8 +55,9 @@ public final class HudOverlay {
 		int height = g.guiHeight();
 		// Place nearest labels first at their anchor; farther ones are nudged upward until they
 		// no longer overlap anything already placed, keeping dense scenes readable.
-		List<float[]> placed = new ArrayList<>();
-		List<PlacedLabel> draws = new ArrayList<>();
+		placedBoxes.clear();
+		draws.clear();
+		int boxIndex = 0;
 		for (OverlayLabel label : labels) {
 			if (!ScreenProjector.INSTANCE.project(label.x(), label.y(), label.z(), width, height, projected)) {
 				continue;
@@ -57,13 +67,22 @@ public final class HudOverlay {
 			float x = projected[0] - w / 2;
 			float y = projected[1] - h;
 			for (int attempt = 0; attempt < 8; attempt++) {
-				float[] hit = overlap(placed, x, y, w, h);
+				float[] hit = overlap(placedBoxes, x, y, w, h);
 				if (hit == null) {
 					break;
 				}
 				y = hit[1] - h - 1;
 			}
-			placed.add(new float[] {x, y, w, h});
+			// Reuse the box arrays between frames; only grow when a frame has more labels than ever before.
+			if (boxIndex == boxPool.size()) {
+				boxPool.add(new float[4]);
+			}
+			float[] box = boxPool.get(boxIndex++);
+			box[0] = x;
+			box[1] = y;
+			box[2] = w;
+			box[3] = h;
+			placedBoxes.add(box);
 			draws.add(new PlacedLabel(label, projected[0], y + h));
 		}
 		for (int i = draws.size() - 1; i >= 0; i--) {
@@ -93,8 +112,9 @@ public final class HudOverlay {
 		pose.scale(label.scale(), label.scale());
 		int left = -w / 2;
 		int top = -h;
-		Draw2D.rounded(g, left - 2, top, w + 4, h, h / 2f, 0xC00B0910);
-		Draw2D.circle(g, left + 2.5f, top + h / 2f, 1.75f, Colors.withAlpha(label.color(), 240));
+		// Texture-based pill and dot: two quads each, instead of a fill per pixel row.
+		dev.hollow.menu.Pill.fill(g, left - 2, top, w + 4, h, 0xC00B0910);
+		dev.hollow.menu.Pill.fill(g, left + 1, top + 4, 3, 3, Colors.withAlpha(label.color(), 240));
 		int textX = left + 6;
 		if (titleWidth > 0) {
 			Draw2D.text(g, font, title, textX, top + 2, Colors.withAlpha(Colors.lerp(label.color(), 0xFFFFFFFF, 0.55f), 255));
@@ -141,6 +161,13 @@ public final class HudOverlay {
 		double trail = Hollow.module(MotionBlurModule.class).guiTrail();
 		long lifetime = Hollow.alerts().lifetimeMillis();
 
+		float customX = 0;
+		float customY = 0;
+		if (placement == HollowAlertsModule.Placement.CUSTOM && alertsElement != null) {
+			float[] pos = dev.hollow.hud.HudElements.screenPosition(alertsElement, g.guiWidth(), g.guiHeight());
+			customX = pos[0];
+			customY = pos[1];
+		}
 		Matrix3x2fStack pose = g.pose();
 		pose.pushMatrix();
 		pose.scale(scale, scale);
@@ -163,6 +190,7 @@ public final class HudOverlay {
 			int baseX = switch (placement) {
 				case TOP_LEFT -> 8;
 				case TOP_CENTER -> (screenW - toastWidth) / 2;
+				case CUSTOM -> Math.round(customX / scale);
 				default -> screenW - toastWidth - 8;
 			};
 			// Direction the toast slides in from: sideways for corner placements, from above when centered.
@@ -172,7 +200,11 @@ public final class HudOverlay {
 				default -> 1;
 			};
 			double dirY = placement == HollowAlertsModule.Placement.TOP_CENTER ? -0.5 : 0;
-			double restY = placement == HollowAlertsModule.Placement.BOTTOM_RIGHT ? screenH - 56 - TOAST_HEIGHT - y : 8 + y;
+			double restY = switch (placement) {
+				case BOTTOM_RIGHT -> screenH - 56 - TOAST_HEIGHT - y;
+				case CUSTOM -> customY / scale + y;
+				default -> 8 + y;
+			};
 			double x = baseX + dirX * slide;
 			double drawY = restY + dirY * slide;
 			// GUI motion blur: faint ghosts trailing behind the toast while it slides.

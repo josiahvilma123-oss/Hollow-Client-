@@ -147,7 +147,7 @@ public final class SkyStudioModule extends Module {
 	private String message = "";
 
 	public SkyStudioModule() {
-		super("sky_studio", "Holo Sky Studio", "Original custom skies, presets and a full sky creator for the overworld.", Category.STUDIO, false);
+		super("sky_studio", "Holo Sky Studio", "Original custom skies, presets and a full sky creator for the overworld.", Category.WORLD, false);
 		for (Setting<?> setting : skyValues) {
 			setting.onChange(value -> {
 				version++;

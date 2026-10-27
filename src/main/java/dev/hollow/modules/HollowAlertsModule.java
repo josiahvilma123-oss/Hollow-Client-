@@ -32,7 +32,7 @@ public final class HollowAlertsModule extends Module {
 
 	public HollowAlertsModule() {
 		super("hollow_alerts", "Hollow Alerts", "Unified, unobtrusive notifications for block and entity detection.",
-			Category.VISUALS_DETECTION, true);
+			Category.HUD, true);
 		for (AlertSource source : AlertSource.values()) {
 			sources.put(source, new SourceSettings(source));
 		}
@@ -77,7 +77,8 @@ public final class HollowAlertsModule extends Module {
 		TOP_RIGHT("Top Right"),
 		TOP_CENTER("Top Center"),
 		TOP_LEFT("Top Left"),
-		BOTTOM_RIGHT("Bottom Right");
+		BOTTOM_RIGHT("Bottom Right"),
+		CUSTOM("Custom (HUD Editor)");
 
 		private final String displayName;
 

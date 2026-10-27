@@ -37,6 +37,40 @@ public final class WorldOverlayRenderer {
 	private final List<Box> outlines = new ArrayList<>();
 	private final List<Line> lines = new ArrayList<>();
 	private BlockResults blockResults;
+	private final List<EntityTracker.Tracked> trackedScratch = new ArrayList<>();
+	private static Vec3 sortEye = Vec3.ZERO;
+	private static final Comparator<EntityTracker.Tracked> BY_DISTANCE =
+		Comparator.comparingDouble(t -> t.entity().position().distanceToSqr(sortEye));
+	private static final boolean[] PASSES = {false, true};
+	private final List<OverlayProvider> providers = new ArrayList<>();
+	private Vec3 sinkCamera = Vec3.ZERO;
+	private final OverlayProvider.Sink sink = new OverlayProvider.Sink() {
+		@Override
+		public void outline(AABB box, int color, float width, boolean seeThrough) {
+			outlines.add(new Box(box.move(-sinkCamera.x, -sinkCamera.y, -sinkCamera.z), color, width, seeThrough));
+		}
+
+		@Override
+		public void fill(AABB box, int color, boolean seeThrough) {
+			fills.add(new Box(box.move(-sinkCamera.x, -sinkCamera.y, -sinkCamera.z), color, 0, seeThrough));
+		}
+
+		@Override
+		public void line(Vec3 from, Vec3 to, int color, float width) {
+			lines.add(new Line(new Vector3f((float) (from.x - sinkCamera.x), (float) (from.y - sinkCamera.y), (float) (from.z - sinkCamera.z)),
+				new Vector3f((float) (to.x - sinkCamera.x), (float) (to.y - sinkCamera.y), (float) (to.z - sinkCamera.z)), color, width));
+		}
+
+		@Override
+		public void label(OverlayLabel label) {
+			labels.add(label);
+		}
+
+		@Override
+		public Vec3 camera() {
+			return sinkCamera;
+		}
+	};
 
 	private record Box(AABB box, int color, float width, boolean seeThrough) {
 	}
@@ -49,6 +83,10 @@ public final class WorldOverlayRenderer {
 
 	public void setBlockResults(BlockResults results) {
 		this.blockResults = results;
+	}
+
+	public void addProvider(OverlayProvider provider) {
+		providers.add(provider);
 	}
 
 	/** Labels gathered during the last world render, nearest first. */
@@ -71,6 +109,16 @@ public final class WorldOverlayRenderer {
 
 		collectBlocks(camera, mainCamera);
 		collectEntities(camera, mainCamera, partialTick);
+		sinkCamera = camera;
+		for (OverlayProvider provider : providers) {
+			try {
+				provider.collect(sink, partialTick);
+			} catch (RuntimeException e) {
+				Hollow.LOGGER.error("Overlay provider {} failed and was removed", provider.getClass().getSimpleName(), e);
+				providers.remove(provider);
+				break;
+			}
+		}
 		if (fills.isEmpty() && outlines.isEmpty() && lines.isEmpty()) {
 			return;
 		}
@@ -88,7 +136,7 @@ public final class WorldOverlayRenderer {
 		poses.pushPose();
 		PoseStack.Pose pose = poses.last();
 		MultiBufferSource consumers = context.consumers();
-		for (boolean seeThrough : new boolean[] {false, true}) {
+		for (boolean seeThrough : PASSES) {
 			VertexConsumer quads = null;
 			for (Box box : fills) {
 				if (box.seeThrough() == seeThrough) {
@@ -99,7 +147,7 @@ public final class WorldOverlayRenderer {
 				}
 			}
 		}
-		for (boolean seeThrough : new boolean[] {false, true}) {
+		for (boolean seeThrough : PASSES) {
 			VertexConsumer buffer = null;
 			for (Box box : outlines) {
 				if (box.seeThrough() == seeThrough) {
@@ -168,9 +216,13 @@ public final class WorldOverlayRenderer {
 			return;
 		}
 		Vector3f origin = tracerOrigin(mainCamera, module.origin.get());
-		List<EntityTracker.Tracked> tracked = new ArrayList<>(tracker.tracked());
+		// Reused between frames; sorted nearest-first so the label budget goes to the closest entities.
+		List<EntityTracker.Tracked> tracked = trackedScratch;
+		tracked.clear();
+		tracked.addAll(tracker.tracked());
 		Vec3 eye = mainCamera.position();
-		tracked.sort(Comparator.comparingDouble(t -> t.entity().position().distanceToSqr(eye)));
+		sortEye = eye;
+		tracked.sort(BY_DISTANCE);
 		int labelBudget = module.names.get() || module.health.get() || module.distance.get() ? module.maxLabels.getInt() : 0;
 		float opacity = module.opacity.getFloat();
 		for (EntityTracker.Tracked entry : tracked) {

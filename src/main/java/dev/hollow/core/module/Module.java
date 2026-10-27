@@ -1,5 +1,8 @@
 package dev.hollow.core.module;
 
+import dev.hollow.core.input.BindMode;
+import dev.hollow.core.input.Keybind;
+import dev.hollow.core.setting.EnumSetting;
 import dev.hollow.core.setting.KeySetting;
 import dev.hollow.core.setting.Setting;
 import java.util.ArrayList;
@@ -10,7 +13,7 @@ import java.util.Objects;
 import java.util.Optional;
 
 /**
- * Base class for every Hollow feature. A module owns its settings, knows whether it is
+ * Base class for every Holo feature. A module owns its settings, knows whether it is
  * enabled and must restore vanilla behaviour in {@link #onDisable()}.
  */
 public abstract class Module {
@@ -21,6 +24,7 @@ public abstract class Module {
 	private final boolean defaultEnabled;
 	private final List<Setting<?>> settings = new ArrayList<>();
 	private final KeySetting keybind;
+	private final EnumSetting<BindMode> bindMode;
 	private final List<Runnable> stateListeners = new ArrayList<>();
 	private boolean enabled;
 	private String unavailableReason;
@@ -31,8 +35,12 @@ public abstract class Module {
 		this.description = Objects.requireNonNull(description);
 		this.category = Objects.requireNonNull(category);
 		this.defaultEnabled = defaultEnabled;
-		this.keybind = new KeySetting("keybind", "Toggle Key", "Press this key in-game to toggle " + name + ".", KeySetting.NONE);
+		this.keybind = new KeySetting("keybind", "Key", "Key, mouse button or combination that controls " + name
+			+ ". Ignored while a menu or text field is open.", Keybind.NONE);
 		this.keybind.group("Controls");
+		this.bindMode = new EnumSetting<>("bind_mode", "Key Mode", "Toggle: press to switch on or off. Hold: on only while held.",
+			BindMode.TOGGLE);
+		this.bindMode.group("Controls");
 	}
 
 	public final String id() {
@@ -57,6 +65,27 @@ public abstract class Module {
 
 	public final KeySetting keybind() {
 		return keybind;
+	}
+
+	public final EnumSetting<BindMode> bindMode() {
+		return bindMode;
+	}
+
+	/**
+	 * Why the module can't act right now even though it is enabled (for example a server that
+	 * doesn't permit it), or empty. Unlike {@link #unavailableReason()} this can change at any time.
+	 */
+	public Optional<String> blockedReason() {
+		return Optional.empty();
+	}
+
+	/** Restores every setting (including the keybind) to its default value. */
+	public final void resetSettings() {
+		for (Setting<?> setting : settings()) {
+			if (setting.persistent()) {
+				setting.reset();
+			}
+		}
 	}
 
 	/** Whether the module may be toggled by the user. Modules without a user-facing toggle return false. */
@@ -135,13 +164,14 @@ public abstract class Module {
 		return add(setting);
 	}
 
-	/** All settings, plus the toggle keybind at the end when the module is toggleable. */
+	/** All settings, plus the keybind and its mode at the end when the module is toggleable. */
 	public final List<Setting<?>> settings() {
 		if (!isToggleable()) {
 			return Collections.unmodifiableList(settings);
 		}
 		List<Setting<?>> all = new ArrayList<>(settings);
 		all.add(keybind);
+		all.add(bindMode);
 		return Collections.unmodifiableList(all);
 	}
 

@@ -17,6 +17,12 @@ abstract class GameRendererMixin {
 	@Final
 	private Minecraft minecraft;
 
+	/** Frame timing for the performance monitor and adaptive quality. */
+	@Inject(method = "render", at = @At("HEAD"))
+	private void hollow$frame(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci) {
+		dev.hollow.perf.PerformanceState.INSTANCE.onFrame();
+	}
+
 	/** After the world, hand and vanilla post effects are drawn, before any HUD or screen. */
 	@Inject(method = "render", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/renderer/fog/FogRenderer;endFrame()V"))
 	private void hollow$motionBlur(DeltaTracker deltaTracker, boolean renderLevel, CallbackInfo ci) {

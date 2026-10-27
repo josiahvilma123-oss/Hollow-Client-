@@ -52,7 +52,7 @@ public final class EntityTracersModule extends Module {
 
 	public EntityTracersModule() {
 		super("entity_tracers", "Entity Tracers", "Lines, boxes and labels for mobs, animals and permitted players.",
-			Category.VISUALS_DETECTION, false);
+			Category.RENDER, false);
 		for (EntityCategory category : EntityCategory.values()) {
 			categories.put(category, new CategorySettings(category));
 		}

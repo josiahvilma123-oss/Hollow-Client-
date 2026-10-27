@@ -225,6 +225,9 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 			context.takeScreenshot(String.format("hollow-%02d-theme-pack", index++));
 			context.runOnClient(client -> client.options.setCameraType(CameraType.FIRST_PERSON));
 
+			Benchmarks.run(context, world, () -> new HollowScreen(null), client -> {
+			}, "baseline");
+
 			// Disabling every module restores vanilla rendering.
 			context.runOnClient(client -> {
 				for (Module module : Hollow.modules().all()) {
@@ -418,7 +421,7 @@ public final class HollowClientGameTest implements FabricClientGameTest {
 		}
 	}
 
-	private static double frameMillis(net.minecraft.client.Minecraft client, int frames) {
+	static double frameMillis(net.minecraft.client.Minecraft client, int frames) {
 		client.gameRenderer.render(client.getDeltaTracker(), true);
 		org.lwjgl.opengl.GL11.glFinish();
 		long start = System.nanoTime();

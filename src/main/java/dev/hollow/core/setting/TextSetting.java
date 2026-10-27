@@ -9,6 +9,7 @@ public class TextSetting extends Setting<String> {
 	private final Predicate<String> validator;
 	private final int maxLength;
 	private final String placeholder;
+	private boolean saved = true;
 
 	public TextSetting(String id, String name, String description, String defaultValue, int maxLength, Predicate<String> validator,
 			String placeholder) {
@@ -16,6 +17,17 @@ public class TextSetting extends Setting<String> {
 		this.validator = validator;
 		this.maxLength = maxLength;
 		this.placeholder = placeholder == null ? "" : placeholder;
+	}
+
+	/** Marks this as a draft field (e.g. a form input) that is not written to the config or profiles. */
+	public TextSetting notSaved() {
+		saved = false;
+		return this;
+	}
+
+	@Override
+	public boolean persistent() {
+		return saved;
 	}
 
 	public int maxLength() {

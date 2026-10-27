@@ -31,7 +31,7 @@ class ConfigManagerTest {
 		int disables;
 
 		TestModule(String id, boolean defaultEnabled) {
-			super(id, id, "test", Category.VISUALS_DETECTION, defaultEnabled);
+			super(id, id, "test", Category.RENDER, defaultEnabled);
 		}
 
 		@Override
@@ -57,7 +57,7 @@ class ConfigManagerTest {
 		finder.setEnabled(true);
 		finder.range.set(64.0);
 		finder.labels.set(false);
-		finder.keybind().set(71);
+		finder.keybind().set(dev.hollow.core.input.Keybind.key(71));
 		config.save();
 
 		ModuleManager reloadedModules = new ModuleManager();
@@ -66,7 +66,7 @@ class ConfigManagerTest {
 		assertTrue(reloaded.isEnabled());
 		assertEquals(64.0, reloaded.range.get());
 		assertFalse(reloaded.labels.get());
-		assertEquals(71, reloaded.keybind().get());
+		assertEquals(dev.hollow.core.input.Keybind.key(71), reloaded.keybind().get());
 		assertEquals(1, reloaded.enables);
 	}
 
@@ -143,7 +143,7 @@ class ConfigManagerTest {
 	void moduleSearchIncludesSettings() {
 		TestModule module = new TestModule("finder", false);
 		assertTrue(module.matches("range"));
-		assertTrue(module.matches("toggle key"));
+		assertTrue(module.matches("key mode"));
 		assertFalse(module.matches("zzz"));
 	}
 
@@ -163,7 +163,7 @@ class ConfigManagerTest {
 		assertTrue(added.isEnabled());
 		assertTrue(Files.exists(dir.resolve("hollow.json.v1.bak")));
 		config.tick();
-		assertTrue(Files.readString(file).contains("\"version\": 3"));
+		assertTrue(Files.readString(file).contains("\"version\": 4"));
 	}
 
 	@Test

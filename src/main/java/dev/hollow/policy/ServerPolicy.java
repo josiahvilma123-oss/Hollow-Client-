@@ -4,7 +4,7 @@ import java.util.Collection;
 import java.util.Locale;
 
 /**
- * Decides which detection features may run on the current server. Single-player worlds
+ * Decides which detection and automation features may run on the current server. Single-player worlds
  * allow everything. On multiplayer servers, player detection is off unless the user has
  * explicitly listed the server as one where it is permitted, and every detection feature
  * shuts off on servers the user marked as restricted.
@@ -18,6 +18,19 @@ public final class ServerPolicy {
 	}
 
 	public static boolean playerDetectionAllowed(boolean singleplayer, String address, Collection<String> restrictedServers,
+			Collection<String> permittedServers) {
+		if (singleplayer) {
+			return true;
+		}
+		return detectionAllowed(false, address, restrictedServers) && matchesAny(address, permittedServers);
+	}
+
+	/**
+	 * Automated play (aim assistance, automatic attacks and block placement) acts in
+	 * single-player, and on multiplayer only on servers the user explicitly listed as permitting
+	 * it. Restricted servers always win.
+	 */
+	public static boolean automationAllowed(boolean singleplayer, String address, Collection<String> restrictedServers,
 			Collection<String> permittedServers) {
 		if (singleplayer) {
 			return true;

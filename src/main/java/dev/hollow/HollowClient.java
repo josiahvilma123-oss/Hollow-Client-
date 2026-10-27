@@ -2,6 +2,40 @@ package dev.hollow;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.hollow.alerts.AlertService;
+import dev.hollow.bridge.BridgeAssist;
+import dev.hollow.combat.AimAssist;
+import dev.hollow.combat.KillAura;
+import dev.hollow.combat.KnockbackTester;
+import dev.hollow.combat.ReachMeter;
+import dev.hollow.core.config.ProfileStore;
+import dev.hollow.core.module.Module;
+import dev.hollow.core.module.Tickable;
+import dev.hollow.core.waypoints.WaypointStore;
+import dev.hollow.exploration.VisibilityLog;
+import dev.hollow.exploration.Waypoints;
+import dev.hollow.hud.AlertsHudElement;
+import dev.hollow.hud.HudElements;
+import dev.hollow.hud.ModuleHuds;
+import dev.hollow.modules.AimAssistModule;
+import dev.hollow.modules.AutoBridgeModule;
+import dev.hollow.modules.EntityVisibilityModule;
+import dev.hollow.modules.FpsBoostModule;
+import dev.hollow.modules.FreecamModule;
+import dev.hollow.modules.HudLayoutModule;
+import dev.hollow.modules.KillAuraModule;
+import dev.hollow.modules.KnockbackTesterModule;
+import dev.hollow.modules.PerformanceMonitorModule;
+import dev.hollow.modules.ReachDisplayModule;
+import dev.hollow.modules.SafeWalkModule;
+import dev.hollow.modules.SpeedBridgeModule;
+import dev.hollow.modules.TriggerBotModule;
+import dev.hollow.modules.WaypointsModule;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import net.fabricmc.fabric.api.event.player.AttackEntityCallback;
+import net.fabricmc.fabric.api.event.player.UseBlockCallback;
+import net.minecraft.world.InteractionResult;
 import dev.hollow.core.config.ConfigManager;
 import dev.hollow.core.module.ModuleManager;
 import dev.hollow.core.util.Clock;
@@ -59,20 +93,35 @@ public final class HollowClient implements ClientModInitializer {
 	public void onInitializeClient() {
 		HollowPipelines.bootstrap();
 
+		// Registration order is the display order within each sidebar category.
 		ModuleManager modules = new ModuleManager();
+		modules.register(new KillAuraModule());
+		modules.register(new TriggerBotModule());
+		modules.register(new ReachDisplayModule());
+		modules.register(new KnockbackTesterModule());
+		modules.register(new AimAssistModule());
+		modules.register(new AutoBridgeModule());
+		modules.register(new SpeedBridgeModule());
+		modules.register(new SafeWalkModule());
 		modules.register(new MotionBlurModule());
-		modules.register(new HollowHandsModule());
-		modules.register(new BlockFinderModule());
-		modules.register(new BlockEspModule());
 		modules.register(new EntityTracersModule());
-		modules.register(new HollowAlertsModule());
-		modules.register(new InterfaceModule());
+		modules.register(new FreecamModule());
+		modules.register(new BlockEspModule());
 		SkyStudioModule skyStudio = modules.register(new SkyStudioModule());
+		modules.register(new WaypointsModule());
+		modules.register(new BlockFinderModule());
+		modules.register(new EntityVisibilityModule());
+		modules.register(new HollowHandsModule());
 		modules.register(new CharacterStudioModule());
+		modules.register(new PerformanceModule());
+		modules.register(new FpsBoostModule());
+		modules.register(new HollowAlertsModule());
+		modules.register(new PerformanceMonitorModule());
+		modules.register(new HudLayoutModule());
+		modules.register(new InterfaceModule());
 		modules.register(new ThemePacksModule());
 		modules.register(new MainMenuModule());
 		modules.register(new LoadingScreenModule());
-		modules.register(new PerformanceModule());
 		modules.register(new ServerRulesModule());
 		Hollow.modules = modules;
 
@@ -105,9 +154,44 @@ public final class HollowClient implements ClientModInitializer {
 
 		ConfigManager config = new ConfigManager(FabricLoader.getInstance().getConfigDir().resolve("hollow").resolve("hollow.json"),
 			modules, Clock.SYSTEM, 750, Hollow.LOGGER::warn);
+		Path configDir = FabricLoader.getInstance().getConfigDir().resolve("hollow");
+		boolean hadConfig = Files.isRegularFile(config.file());
 		config.load();
 		config.watch();
 		Hollow.config = config;
+
+		ProfileStore profiles = new ProfileStore(configDir.resolve("profiles"), config, Hollow.LOGGER::warn);
+		Hollow.profiles = profiles;
+		if (hadConfig && profiles.list().isEmpty()) {
+			// First run after the update: keep the existing settings as a profile the user can return to.
+			try {
+				profiles.saveCurrent("Default", System.currentTimeMillis());
+			} catch (IOException | RuntimeException e) {
+				Hollow.LOGGER.warn("Could not create the Default profile: {}", e.getMessage());
+			}
+		}
+		Waypoints.INSTANCE.init(new WaypointStore(configDir.resolve("waypoints"), Hollow.LOGGER::warn));
+
+		WorldOverlayRenderer.INSTANCE.addProvider(BridgeAssist.INSTANCE);
+		WorldOverlayRenderer.INSTANCE.addProvider(KillAura.INSTANCE);
+		WorldOverlayRenderer.INSTANCE.addProvider(ReachMeter.INSTANCE);
+		WorldOverlayRenderer.INSTANCE.addProvider(Waypoints.INSTANCE);
+		HudOverlay.INSTANCE.setAlertsElement(HudElements.register(new AlertsHudElement()));
+		ModuleHuds.registerAll();
+
+		AttackEntityCallback.EVENT.register((player, level, hand, entity, hit) -> {
+			if (level.isClientSide() && player == Minecraft.getInstance().player) {
+				AimAssist.INSTANCE.onAttack(entity);
+				ReachMeter.INSTANCE.onAttack(Minecraft.getInstance().player, entity);
+			}
+			return InteractionResult.PASS;
+		});
+		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
+			if (level.isClientSide() && player == Minecraft.getInstance().player && modules.get(SpeedBridgeModule.class).isEnabled()) {
+				BridgeAssist.INSTANCE.onManualPlace(player.getItemInHand(hand));
+			}
+			return InteractionResult.PASS;
+		});
 
 		KeyMapping.Category category = KeyMapping.Category.register(id("hollow"));
 		openMenuKey = KeyBindingHelper.registerKeyBinding(new KeyMapping("key.hollow.open_menu", InputConstants.Type.KEYSYM,
@@ -122,6 +206,12 @@ public final class HollowClient implements ClientModInitializer {
 				}
 			}
 			keybinds.tick(client);
+			for (Module module : modules.all()) {
+				if (module instanceof Tickable tickable) {
+					ModuleRuntime.safely(module, tickable::tick);
+				}
+			}
+			ReachMeter.INSTANCE.tick();
 			scanner.tick(client);
 			blockResults.tick(client.level, client.player == null ? null : client.player.getEyePosition());
 			entities.tick(client);
@@ -137,17 +227,31 @@ public final class HollowClient implements ClientModInitializer {
 			Hollow.alerts().clear();
 			// Menu artwork isn't needed in game; free it until the next menu visit.
 			MenuScene.release();
+			Waypoints.INSTANCE.onWorldChanged();
+			VisibilityLog.INSTANCE.forget();
+			KnockbackTesterModule knockback = modules.get(KnockbackTesterModule.class);
+			if (knockback.isEnabled()) {
+				KnockbackTester.INSTANCE.applyResistance(knockback.resistance.get());
+			}
 		});
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			scanner.clear();
 			entities.clear();
 			ScreenProjector.INSTANCE.invalidate();
+			// World-bound tools stop cleanly; their settings are kept.
+			modules.get(FreecamModule.class).setEnabled(false);
+			Waypoints.INSTANCE.onWorldChanged();
+			VisibilityLog.INSTANCE.forget();
+			AimAssist.INSTANCE.reset();
+			KillAura.INSTANCE.reset();
+			config.save();
 		});
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> config.save());
 
 		WorldRenderEvents.END_MAIN.register(WorldOverlayRenderer.INSTANCE::render);
 		HudElementRegistry.attachElementBefore(VanillaHudElements.CROSSHAIR, id("labels"), HudOverlay.INSTANCE::renderLabels);
 		HudElementRegistry.addLast(id("alerts"), HudOverlay.INSTANCE::renderAlerts);
+		HudElementRegistry.addLast(id("hud_elements"), HudElements::render);
 
 		Hollow.LOGGER.info("Holo initialised with {} modules", modules.all().size());
 	}
